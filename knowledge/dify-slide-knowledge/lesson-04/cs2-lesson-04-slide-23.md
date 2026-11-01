@@ -4,8 +4,7 @@
 出典: コンシス第4回.pdf、スライド23枚目
 スライドID: cs2-lesson-04-slide-23
 
-## スライド本文
-
+本文:
 Busy-wait と Sleep and Wakeup
 • Busy-wait
 • 常に繰り返しロック変数 (spin lock) をテスト (tight loop に陥る)

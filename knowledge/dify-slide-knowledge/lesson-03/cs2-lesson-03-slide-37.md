@@ -4,7 +4,6 @@
 出典: コンシス第3回.pdf、スライド37枚目
 スライドID: cs2-lesson-03-slide-37
 
-## スライド本文
-
+本文:
 【参考】 コンパイル結果の例 (Assembler)
 (gcc –S sample.c –o sample.s で出力)

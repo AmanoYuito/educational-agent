@@ -4,8 +4,7 @@
 出典: コンシス第3回.pdf、スライド25枚目
 スライドID: cs2-lesson-03-slide-25
 
-## スライド本文
-
+本文:
 SJFスケジューリング
 • 最短時間順 (SJF: Shortest Job First)
 • 最も短いCPU処理を持つプロセスから順にCPUを割り当てる

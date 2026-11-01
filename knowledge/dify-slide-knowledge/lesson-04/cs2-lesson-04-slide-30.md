@@ -4,8 +4,7 @@
 出典: コンシス第4回.pdf、スライド30枚目
 スライドID: cs2-lesson-04-slide-30
 
-## スライド本文
-
+本文:
 【参考】 Semaphoreの例 (C言語)
 • 別プロセス間での相互排除:
 • semabinit.c , sema.c, semb.c をコンパイル・リンク

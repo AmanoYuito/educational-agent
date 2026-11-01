@@ -4,8 +4,7 @@
 出典: コンシス第3回.pdf、スライド15枚目
 スライドID: cs2-lesson-03-slide-15
 
-## スライド本文
-
+本文:
 プロセス制御ブロック
 • プロセス制御ブロック (Process Control Block: PCB)
 • システム内部でプロセスを表すデータ構造．Process table entry とも呼ぶ

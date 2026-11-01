@@ -4,8 +4,7 @@
 出典: コンシス第3回.pdf、スライド24枚目
 スライドID: cs2-lesson-03-slide-24
 
-## スライド本文
-
+本文:
 FCFSスケジューリング
 • 到着順 (FCFS: First Come First Serve)
 • 実行可能キューへの到着順 (FIFO: First In First Out)でCPUを割り付ける

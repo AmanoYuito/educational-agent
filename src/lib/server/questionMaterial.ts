@@ -216,11 +216,13 @@ export async function selectQuestionMaterial(
       chosen.sort((a, b) => a.position - b.position)
       const content = chosen.map(segmentText).join('\n\n')
       if (content.replace(/\s/g, '').length < 80) continue
-      if (
-        slideNumbersFromMaterial(doc.name, content).length &&
-        content.includes('## スライド本文')
-      ) {
-        const body = content.split('## スライド本文').slice(1).join('')
+      const bodyMarker = content.includes('## スライド本文')
+        ? '## スライド本文'
+        : content.includes('本文:')
+          ? '本文:'
+          : undefined
+      if (slideNumbersFromMaterial(doc.name, content).length && bodyMarker) {
+        const body = content.split(bodyMarker).slice(1).join('')
         if (body.replace(/\s/g, '').length < 80) continue
       }
       candidates.push({

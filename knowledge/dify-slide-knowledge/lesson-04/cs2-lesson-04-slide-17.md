@@ -4,6 +4,5 @@
 出典: コンシス第4回.pdf、スライド17枚目
 スライドID: cs2-lesson-04-slide-17
 
-## スライド本文
-
+本文:
 Peterson’s algorithm (Dekker のアルゴリズム) (3.3.1)

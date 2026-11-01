@@ -4,8 +4,7 @@
 出典: コンシス第4回.pdf、スライド7枚目
 スライドID: cs2-lesson-04-slide-07
 
-## スライド本文
-
+本文:
 (参考) Windowsにおける各プロセスのThreads
 • Powershell アプリを起動
 o 以下の powershell comandlet を起動

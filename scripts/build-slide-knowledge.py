@@ -42,7 +42,7 @@ def build() -> None:
                 f"講義: コンピュータシステム2 第{lecture}回\n"
                 f"出典: コンシス第{lecture}回.pdf、スライド{number}枚目\n"
                 f"スライドID: cs2-lesson-{lecture:02d}-slide-{number:02d}\n\n"
-                f"## スライド本文\n\n{body}\n"
+                f"本文:\n{body}\n"
             )
             (destination / f"cs2-lesson-{lecture:02d}-slide-{number:02d}.md").write_text(
                 content, encoding="utf-8"

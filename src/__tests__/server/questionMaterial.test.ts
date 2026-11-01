@@ -106,6 +106,20 @@ describe('random material selection from real knowledge content', () => {
     expect(selected.slideNumbers).toEqual([13])
     expect(selected.text).not.toContain('本日の講義内容')
   })
+  it('skips slides whose extracted body is too short despite a long source header', async () => {
+    mockPages(
+      page([{ ...doc, name: 'cs2-lesson-04-slide-13.md' }]),
+      page([
+        segment(1, {
+          content:
+            '# 第4回 スライド13 同期\n講義: コンピュータシステム2 第4回\n出典: コンシス第4回.pdf、スライド13枚目\nスライドID: cs2-lesson-04-slide-13\n本文:\n図のみ',
+        }),
+      ])
+    )
+    await expect(selectQuestionMaterial()).rejects.toThrow(
+      '別の本文がありません'
+    )
+  })
   it('prefers unused ranges and reuses them only after exhausting fresh material', async () => {
     mockPages(
       page([doc]),

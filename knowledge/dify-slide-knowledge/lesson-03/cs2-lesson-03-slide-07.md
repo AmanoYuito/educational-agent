@@ -4,8 +4,7 @@
 出典: コンシス第3回.pdf、スライド7枚目
 スライドID: cs2-lesson-03-slide-07
 
-## スライド本文
-
+本文:
 生成時の処理の流れ
 • fork() 実行の内部動作
 • OSが新しいPCB（Process Control Block）領域を確保

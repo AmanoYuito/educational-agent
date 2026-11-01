@@ -4,8 +4,7 @@
 出典: コンシス第3回.pdf、スライド26枚目
 スライドID: cs2-lesson-03-slide-26
 
-## スライド本文
-
+本文:
 SRTFスケジューリング
 • 残余処理時間順 (SRTF: Shortest Remaining Time First)
 • 横取りありのSJFスケジューリング
