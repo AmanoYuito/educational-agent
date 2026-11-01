@@ -34,6 +34,7 @@ export type GeneratedQuizMemory = {
   questionGroup?: string
   sourceDatasetId?: string
   sourceDatasetName?: string
+  sourceSlideNumbers?: number[]
   answerIndex?: number
   answer?: string
   explanation?: string
@@ -155,6 +156,7 @@ export type QuestionPoolItem = {
   sourceDocumentId?: string
   sourceDocumentName?: string
   sourceSegmentIds?: string[]
+  sourceSlideNumbers?: number[]
   sourceContext?: string
   variantFamilyId?: string
   variantIndex?: number

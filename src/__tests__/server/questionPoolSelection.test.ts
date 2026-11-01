@@ -30,6 +30,7 @@ const row: QuestionPoolRow = {
   source_dataset_id: 'dataset-1',
   source_dataset_name: '教材1',
   source_segment_ids: ['document-1:parent-chunk-1'],
+  source_slide_numbers: [13],
 }
 
 describe('question pool selection', () => {
@@ -141,12 +142,14 @@ describe('question pool selection', () => {
         answerIndex: 0,
         answer: 'SMTP',
         explanation: row.explanation,
+        sourceSlideNumbers: [13],
       })
     )
     expect(result).toMatchObject({
       serverQuizId: 'issued-1',
       question: row.question_text,
       choices: ['SMTP', 'HTTP', 'FTP', 'POP3'],
+      sourceSlideNumbers: [13],
     })
     expect(result).not.toHaveProperty('answer')
     expect(result).not.toHaveProperty('answerIndex')

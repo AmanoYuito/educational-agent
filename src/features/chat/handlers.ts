@@ -430,6 +430,12 @@ const buildQuizMemorySystemPrompt = (
     sections.push(`問題: ${quizMemory.question}`)
   }
 
+  if (quizMemory.sourceSlideNumbers?.length) {
+    sections.push(
+      `参照スライド: ${quizMemory.sourceSlideNumbers.join('、')}枚目`
+    )
+  }
+
   sections.push(
     `問題形式: ${quizMemory.questionType === 'written' ? '記述式' : '4択'}`
   )
@@ -495,6 +501,8 @@ const buildQuestionPoolQuizMemory = (
   serverQuizId: item.serverQuizId,
   questionPoolId: item.id,
   learningSessionId: item.learningSessionId,
+  lessonId: item.lessonId,
+  sourceSlideNumbers: item.sourceSlideNumbers,
   questionType: item.questionType,
   understandSkill: item.understandSkill,
   question: item.question,
@@ -1812,6 +1820,28 @@ export const handleSendChatFn =
 
       if (modalImage) {
         homeStore.setState({ modalImage: '' })
+      }
+
+      if (
+        activeQuizMemory &&
+        /(?:スライド|ページ|何枚目)/u.test(newMessage) &&
+        /(?:どの|何|参照|見る|見れば|復習)/u.test(newMessage)
+      ) {
+        const slides = activeQuizMemory.sourceSlideNumbers || []
+        const lesson = activeQuizMemory.lessonId?.match(/-(\d+)$/)?.[1]
+        const answer = slides.length
+          ? `この問題は${lesson ? `第${Number(lesson)}回の` : ''}${slides.join('・')}枚目のスライドを参照しています。`
+          : 'この問題には参照スライド番号が記録されていません。資料内の該当箇所を確認してください。'
+        homeStore.getState().upsertMessage({
+          id: generateMessageId(),
+          role: 'assistant',
+          content: answer,
+        })
+        if (shouldRedisplayActiveQuiz && activeQuizMemory.awaitingAnswer) {
+          appendPendingQuizReminder(activeQuizMemory)
+        }
+        homeStore.setState({ chatProcessing: false })
+        return
       }
 
       if (

@@ -16,6 +16,7 @@ type SaveQuestionPoolItem = QuestionPoolItem & {
   sourceDocumentId?: string
   sourceDocumentName?: string
   sourceSegmentIds?: string[]
+  sourceSlideNumbers?: number[]
   aiOutput?: unknown
   isActive?: boolean
   variantFamilyId?: string
@@ -95,6 +96,7 @@ const normalizeItem = (
     sourceDocumentId?: string
     sourceDocumentName?: string
     sourceSegmentIds?: string[]
+    sourceSlideNumbers?: number[]
   }
 ) => {
   const question = String(raw.question || '').trim()
@@ -141,6 +143,17 @@ const normalizeItem = (
     ? (raw.sourceSegmentIds || inherited.sourceSegmentIds || [])
         .map((id) => String(id).trim())
         .filter(Boolean)
+    : []
+  const sourceSlideNumbers = Array.isArray(
+    raw.sourceSlideNumbers || inherited.sourceSlideNumbers
+  )
+    ? [
+        ...new Set(
+          (raw.sourceSlideNumbers || inherited.sourceSlideNumbers || []).filter(
+            (number) => Number.isInteger(number) && number > 0 && number <= 999
+          )
+        ),
+      ]
     : []
   const aiOutput =
     raw.aiOutput === undefined ? null : JSON.stringify(raw.aiOutput)
@@ -202,6 +215,7 @@ const normalizeItem = (
     sourceDocumentId: sourceDocumentId || null,
     sourceDocumentName: sourceDocumentName || null,
     sourceSegmentIds,
+    sourceSlideNumbers,
     questionNumber:
       typeof raw.questionNumber === 'number' &&
       Number.isInteger(raw.questionNumber) &&
@@ -288,6 +302,7 @@ export default async function handler(
       sourceDocumentId: item.sourceDocumentId,
       sourceDocumentName: item.sourceDocumentName,
       sourceSegmentIds: item.sourceSegmentIds,
+      sourceSlideNumbers: item.sourceSlideNumbers,
     })
   )
 
@@ -325,6 +340,7 @@ export default async function handler(
           source_document_id,
           source_document_name,
           source_segment_ids,
+          source_slide_numbers,
           variant_family_id,
           variant_index,
           is_active,
@@ -335,7 +351,7 @@ export default async function handler(
           $1, $2, $3, $4, $5,
           $6, $7, $8, $9, $10,
           $11, $12, $13, $14, $15,
-          $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26,
+          $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,
           now(), now()
         )
         ON CONFLICT (id) DO UPDATE SET
@@ -360,6 +376,7 @@ export default async function handler(
           source_document_id = EXCLUDED.source_document_id,
           source_document_name = EXCLUDED.source_document_name,
           source_segment_ids = EXCLUDED.source_segment_ids,
+          source_slide_numbers = EXCLUDED.source_slide_numbers,
           variant_family_id = EXCLUDED.variant_family_id,
           variant_index = EXCLUDED.variant_index,
           is_active = EXCLUDED.is_active,
@@ -389,6 +406,7 @@ export default async function handler(
         item.sourceDocumentId,
         item.sourceDocumentName,
         JSON.stringify(item.sourceSegmentIds),
+        JSON.stringify(item.sourceSlideNumbers),
         item.variantFamilyId,
         item.variantIndex,
         item.isActive,

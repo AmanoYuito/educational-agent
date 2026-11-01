@@ -3,6 +3,7 @@ import knowledgeSources from '@/config/questionKnowledge.json'
 import {
   selectQuestionMaterial,
   selectQuestionMaterialBundle,
+  slideNumbersFromMaterial,
 } from '@/lib/server/questionMaterial'
 import { fetchDifyKnowledgePage } from '../../../app/lib/api/client'
 
@@ -36,6 +37,23 @@ const page = (data: unknown[], has_more = false) => ({ data, has_more })
 const sourceId = (n: number) => `${docId}:${id(n)}`
 
 describe('random material selection from real knowledge content', () => {
+  it('extracts explicit slide numbers without guessing from unrelated page text', () => {
+    expect(
+      slideNumbersFromMaterial(
+        'cs2-lesson-04-slide-13.md',
+        '# 第4回 スライド13 共有資源'
+      )
+    ).toEqual([13])
+    expect(
+      slideNumbersFromMaterial('コンシス第4回.pdf', '共有資源について\n13')
+    ).toEqual([])
+    expect(
+      slideNumbersFromMaterial(
+        '資料.md',
+        '# 第4回 スライド13 共有資源\n# 第4回 スライド14 同期'
+      )
+    ).toEqual([13, 14])
+  })
   const oldEnv = { ...process.env }
   let serial = 0
   beforeEach(() => {
@@ -68,6 +86,25 @@ describe('random material selection from real knowledge content', () => {
     expect(calls[1][0]).toContain('page=2')
     expect(calls[3][0]).toContain('page=2')
     expect(calls[0][1]).toBe(process.env.DIFY_KNOWLEDGE_API_KEY)
+  })
+  it('excludes an agenda chunk and does not mix it into adjacent slide context', async () => {
+    mockPages(
+      page([doc]),
+      page([
+        segment(1, {
+          content: '本日の講義内容\n1. プロセス\n2. 資源'.repeat(5),
+        }),
+        segment(2, {
+          content: '# 第4回 スライド13 共有資源\n共有資源の説明です。'.repeat(
+            7
+          ),
+        }),
+      ])
+    )
+    const selected = await selectQuestionMaterial()
+    expect(selected.sourceIds).toEqual([sourceId(2)])
+    expect(selected.slideNumbers).toEqual([13])
+    expect(selected.text).not.toContain('本日の講義内容')
   })
   it('prefers unused ranges and reuses them only after exhausting fresh material', async () => {
     mockPages(

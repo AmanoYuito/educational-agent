@@ -148,6 +148,7 @@ export function publicQuiz(memory: GeneratedQuizMemory): GeneratedQuizMemory {
     total,
     difficultyLevel,
     questionGroup,
+    sourceSlideNumbers: memory.sourceSlideNumbers,
     rawText:
       questionType === 'written'
         ? ['【記述問題】', question].join('\n')

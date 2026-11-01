@@ -27,6 +27,7 @@ type MaterialDocument = {
 export type QuestionMaterial = {
   text: string
   sourceIds: string[]
+  slideNumbers: number[]
   datasetId: string
   documentId: string
   documentName: string
@@ -52,6 +53,27 @@ let cache:
   | { config: string; expires: number; documents: MaterialDocument[] }
   | undefined
 const MAX_TEXT = 12000
+
+/** 出題用教材の明示的な見出しだけを根拠にする。PDFの末尾の数字は推測しない。 */
+export function slideNumbersFromMaterial(
+  documentName: string,
+  content: string
+) {
+  const numbers = new Set<number>()
+  const fromName = documentName.match(/lesson-\d+-slide-(\d{1,3})\.md$/i)
+  if (fromName) numbers.add(Number(fromName[1]))
+  for (const match of content.matchAll(
+    /(?:^|\n)#{1,3}\s*第\d+回\s+スライド\s*(\d{1,3})(?=\s|$)/g
+  )) {
+    numbers.add(Number(match[1]))
+  }
+  return [...numbers].filter((number) => number > 0).sort((a, b) => a - b)
+}
+
+const isNavigationOnly = (text: string) =>
+  /^(?:#{1,3}\s*)?(?:本日の講義内容|目次|講義の目次|アジェンダ)(?:\s|$)/m.test(
+    text.trim()
+  )
 
 async function allPages<T>(
   base: string,
@@ -172,6 +194,7 @@ export async function selectQuestionMaterial(
     for (let i = 0; i < doc.segments.length; i++) {
       const center = doc.segments[i]
       if (rejected.has(sourceId(doc, center))) continue
+      if (isNavigationOnly(segmentText(center))) continue
       const chosen = [center]
       let length = heading.length + segmentText(center).length
       if (length > maxCharacters) continue // Do not cut a sentence midway.
@@ -179,6 +202,7 @@ export async function selectQuestionMaterial(
         const neighbor = doc.segments[index]
         if (
           !neighbor ||
+          isNavigationOnly(segmentText(neighbor)) ||
           Math.abs(neighbor.position - center.position) !== 1 ||
           rejected.has(sourceId(doc, neighbor))
         )
@@ -192,9 +216,17 @@ export async function selectQuestionMaterial(
       chosen.sort((a, b) => a.position - b.position)
       const content = chosen.map(segmentText).join('\n\n')
       if (content.replace(/\s/g, '').length < 80) continue
+      if (
+        slideNumbersFromMaterial(doc.name, content).length &&
+        content.includes('## スライド本文')
+      ) {
+        const body = content.split('## スライド本文').slice(1).join('')
+        if (body.replace(/\s/g, '').length < 80) continue
+      }
       candidates.push({
         text: heading + content,
         sourceIds: chosen.map((s) => sourceId(doc, s)),
+        slideNumbers: slideNumbersFromMaterial(doc.name, content),
         datasetId,
         documentId: doc.id,
         documentName: doc.name,

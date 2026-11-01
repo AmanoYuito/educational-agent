@@ -51,6 +51,10 @@ const requestSchema = z
         sourceDocumentId: z.string().max(100).optional(),
         sourceDocumentName: z.string().max(300).optional(),
         sourceSegmentIds: sourceIdsSchema,
+        sourceSlideNumbers: z
+          .array(z.number().int().min(1).max(999))
+          .max(5)
+          .optional(),
         questionType: z.enum(['multiple_choice', 'written']),
         understandSkill: understandSkillSchema.optional(),
         variantIndex: z.number().int().min(1).max(10),
@@ -210,6 +214,7 @@ export default async function handler(
       material = {
         text: input.variantBase.sourceContext,
         sourceIds: input.variantBase.sourceSegmentIds,
+        slideNumbers: input.variantBase.sourceSlideNumbers || [],
         datasetId: input.variantBase.sourceDatasetId,
         documentId: input.variantBase.sourceDocumentId || '',
         documentName: input.variantBase.sourceDocumentName || '',
@@ -408,6 +413,7 @@ export default async function handler(
       sourceDocumentId: material.documentId,
       sourceDocumentName: material.documentName,
       sourceSegmentIds: material.sourceIds,
+      sourceSlideNumbers: material.slideNumbers,
       question: quiz.public.question,
       difficultyLevel: input.difficultyLevel,
       questionGroup,

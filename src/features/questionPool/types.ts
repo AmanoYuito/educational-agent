@@ -49,6 +49,7 @@ export type PoolGenerationRequest = {
     sourceDocumentId?: string
     sourceDocumentName?: string
     sourceSegmentIds: string[]
+    sourceSlideNumbers?: number[]
     questionType: PoolQuestionType
     understandSkill?: UnderstandSkill
     variantIndex: number
@@ -74,6 +75,7 @@ export type GeneratedPoolDraft = {
   sourceDocumentId?: string
   sourceDocumentName?: string
   sourceSegmentIds?: string[]
+  sourceSlideNumbers?: number[]
   id: string
   question: string
   correctAnswer: string

@@ -29,6 +29,7 @@ type QuestionPoolManageRow = {
   source_document_id: string | null
   source_document_name: string | null
   source_segment_ids: string[] | null
+  source_slide_numbers: number[] | null
   variant_family_id: string | null
   variant_index: number
   ai_output: string | null
@@ -169,6 +170,7 @@ export default async function handler(
           source_document_id,
           source_document_name,
           source_segment_ids,
+          source_slide_numbers,
           variant_family_id,
           variant_index,
           ai_output,
@@ -335,6 +337,7 @@ export default async function handler(
       sourceDocumentId: row.source_document_id || '',
       sourceDocumentName: row.source_document_name || '',
       sourceSegmentIds: row.source_segment_ids || [],
+      sourceSlideNumbers: row.source_slide_numbers || [],
       variantFamilyId: row.variant_family_id || '',
       variantIndex: row.variant_index,
       aiOutput: row.ai_output || '',

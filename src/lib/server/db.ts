@@ -262,6 +262,7 @@ export const ensureSchema = async () => {
           source_document_id TEXT,
           source_document_name TEXT,
           source_segment_ids JSONB,
+          source_slide_numbers JSONB NOT NULL DEFAULT '[]'::jsonb,
           variant_family_id TEXT,
           variant_index INTEGER NOT NULL DEFAULT 0,
           is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -290,6 +291,9 @@ export const ensureSchema = async () => {
       )
       await db.query(
         'ALTER TABLE question_pool ADD COLUMN IF NOT EXISTS source_segment_ids JSONB'
+      )
+      await db.query(
+        "ALTER TABLE question_pool ADD COLUMN IF NOT EXISTS source_slide_numbers JSONB NOT NULL DEFAULT '[]'::jsonb"
       )
       await db.query(
         'ALTER TABLE question_pool ADD COLUMN IF NOT EXISTS bloom_level TEXT'

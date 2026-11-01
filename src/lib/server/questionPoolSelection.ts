@@ -22,6 +22,7 @@ export type QuestionPoolRow = {
   source_dataset_name: string | null
   /** Difyの親チャンクを含む、作問時に参照した教材区切り。 */
   source_segment_ids?: string[] | null
+  source_slide_numbers?: number[] | null
   understand_skill?: UnderstandSkill | null
 }
 
@@ -104,6 +105,7 @@ export const toQuestionPoolItem = (row: QuestionPoolRow): QuestionPoolItem => ({
   topic: row.topic || undefined,
   sourceDatasetId: row.source_dataset_id || undefined,
   sourceDatasetName: row.source_dataset_name || undefined,
+  sourceSlideNumbers: row.source_slide_numbers || undefined,
   understandSkill: row.understand_skill || undefined,
 })
 
@@ -213,6 +215,7 @@ export async function selectQuestionPoolRow({
           qp.wrong_answers,
           qp.explanation,
           qp.source_context,
+          qp.source_slide_numbers,
           qp.difficulty_level,
           qp.question_group,
           qp.topic,
@@ -282,6 +285,7 @@ export async function selectQuestionPoolRow({
         wrong_answers,
         explanation,
         source_context,
+        source_slide_numbers,
         difficulty_level,
         question_group,
         topic,
@@ -460,6 +464,7 @@ export async function issueQuestionPoolItem(
     questionGroup: item.questionGroup,
     sourceDatasetId: item.sourceDatasetId,
     sourceDatasetName: item.sourceDatasetName,
+    sourceSlideNumbers: item.sourceSlideNumbers,
     updatedAt: new Date().toISOString(),
     quizIndex: session?.quizIndex,
     total: session?.total,
@@ -467,6 +472,7 @@ export async function issueQuestionPoolItem(
 
   return {
     id: item.id,
+    lessonId: item.lessonId,
     serverQuizId: memory.serverQuizId,
     questionType: item.questionType,
     understandSkill: item.understandSkill,
@@ -477,6 +483,7 @@ export async function issueQuestionPoolItem(
     topic: item.topic,
     sourceDatasetId: item.sourceDatasetId,
     sourceDatasetName: item.sourceDatasetName,
+    sourceSlideNumbers: item.sourceSlideNumbers,
     learningSessionId: session?.sessionId,
     quizIndex: session?.quizIndex,
     total: session?.total,

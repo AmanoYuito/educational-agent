@@ -326,6 +326,23 @@ describe('handlers', () => {
       })
     })
 
+    it('answers a slide-location question from the issued quiz without grading it', async () => {
+      state.latestGeneratedQuizMemory.lessonId = 'computer-systems-2-04'
+      state.latestGeneratedQuizMemory.sourceSlideNumbers = [13]
+
+      await handleSendChatFn()('先ほどの問題は何スライド目を見ればいい？')
+
+      expect(submitQuizAnswer).not.toHaveBeenCalled()
+      expect(getDifyChatResponse).not.toHaveBeenCalled()
+      expect(state.upsertMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: 'assistant',
+          content: 'この問題は第4回の13枚目のスライドを参照しています。',
+        })
+      )
+      expect(state.latestGeneratedQuizMemory.awaitingAnswer).toBe(true)
+    })
+
     it('adds a revealed unanswered quiz to history and review candidates', async () => {
       const attempt = {
         id: 'issued-id',

@@ -182,6 +182,7 @@ export const AdminQuestionStudio = ({
                     sourceDocumentId: baseItem.sourceDocumentId,
                     sourceDocumentName: baseItem.sourceDocumentName,
                     sourceSegmentIds: baseItem.sourceSegmentIds || [],
+                    sourceSlideNumbers: baseItem.sourceSlideNumbers || [],
                     questionType,
                     variantIndex,
                   },
