@@ -1,4 +1,4 @@
-"""Sync per-slide Markdown or one bundled text file to a Dify knowledge base.
+"""Sync per-slide Markdown or one bundled Markdown file to a Dify knowledge base.
 
 Example:
     python3 scripts/sync-dify-slide-knowledge.py --lesson 4 --dataset-id UUID --bundle
@@ -190,7 +190,7 @@ def main() -> None:
     parser.add_argument("--lesson", type=int, choices=(3, 4), required=True)
     parser.add_argument("--dataset-id", required=True)
     parser.add_argument("--apply", action="store_true", help="Upload missing files")
-    parser.add_argument("--bundle", action="store_true", help="Use one text file for the entire lecture")
+    parser.add_argument("--bundle", action="store_true", help="Use one Markdown file for the entire lecture")
     parser.add_argument("--replace", action="store_true", help="Reindex an existing bundle document")
     parser.add_argument("--limit", type=int, help="Process only the first N files")
     args = parser.parse_args()
@@ -199,11 +199,12 @@ def main() -> None:
         parser.error("--replace requires --bundle --apply")
     key = api_key()
     if args.bundle:
-        path = ROOT / "knowledge/dify-slide-knowledge/bundles" / f"cs2-lesson-{args.lesson:02d}-slides.txt"
+        path = ROOT / "knowledge/dify-slide-knowledge/bundles" / f"cs2-lesson-{args.lesson:02d}-slides.md"
         if not path.exists():
             raise RuntimeError(f"Missing bundle: {path}")
         documents = existing_documents(dataset_id, key)
-        document = documents.get(path.name)
+        legacy_name = f"cs2-lesson-{args.lesson:02d}-slides.txt"
+        document = documents.get(path.name) or documents.get(legacy_name)
         if document is None:
             if not args.apply:
                 print(f"Bundle missing in Dify: {path.name}")

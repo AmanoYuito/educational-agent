@@ -128,7 +128,7 @@ describe('random material selection from real knowledge content', () => {
   })
   it('keeps neighboring chunks from different slides separate in a bundled document', async () => {
     mockPages(
-      page([{ ...doc, name: 'cs2-lesson-04-slides.txt' }]),
+      page([{ ...doc, name: 'cs2-lesson-04-slides.md' }]),
       page([
         segment(1, {
           content:

@@ -1,4 +1,4 @@
-"""Build one quota-friendly Dify text file per lecture from slide Markdown files.
+"""Build one quota-friendly Dify Markdown file per lecture from slide files.
 
 Dify's custom chunk separator `***` makes each slide a separate chunk while
 keeping the document count low. Run after build-slide-knowledge.py.
@@ -20,13 +20,13 @@ def build() -> None:
             raise ValueError(f"Expected {count} slides for lecture {lecture}")
         chunks = []
         for slide in slides:
-            content = slide.read_text(encoding="utf-8").strip().removeprefix("# ")
+            content = slide.read_text(encoding="utf-8").strip()
             if "スライドID:" not in content or "本文:" not in content or "***" in content:
                 raise ValueError(f"Invalid slide content: {slide}")
             if len(content) > 1024:
                 raise ValueError(f"Slide exceeds chunk length: {slide}")
             chunks.append(content)
-        (DESTINATION / f"cs2-lesson-{lecture:02d}-slides.txt").write_text(
+        (DESTINATION / f"cs2-lesson-{lecture:02d}-slides.md").write_text(
             "\n***\n".join(chunks) + "\n", encoding="utf-8"
         )
 
