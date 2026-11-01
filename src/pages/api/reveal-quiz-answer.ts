@@ -29,7 +29,9 @@ export default async function handler(
           result.quiz.learningSessionId
         )
       : null
-    return res.status(200).json({ grade: result.grade, learningSet })
+    return res
+      .status(200)
+      .json({ grade: result.grade, attempt: result.attempt, learningSet })
   } catch (error) {
     if (error instanceof QuizError)
       return res.status(error.status).json({ message: error.message })

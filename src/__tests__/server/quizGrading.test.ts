@@ -203,7 +203,7 @@ describe('server-owned quiz grading', () => {
     )
   })
 
-  it('reveals the canonical answer as unanswered without adding an attempt', async () => {
+  it('records a revealed answer as an unanswered review candidate', async () => {
     const db = database({
       quiz: { ...quiz(), serverQuizId: 'quiz-id' },
       graded_result: null,
@@ -220,8 +220,15 @@ describe('server-owned quiz grading', () => {
       explanation: '送信はSMTPです。',
       emotion: 'neutral',
     })
-    expect(db.query.mock.calls.some(([sql]) => sql.startsWith('INSERT'))).toBe(
-      false
+    expect(result.attempt).toMatchObject({
+      id: 'quiz-id',
+      answerStatus: 'unanswered',
+      userAnswer: 'ー',
+      correct: false,
+    })
+    expect(db.query).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO quiz_attempts'),
+      expect.arrayContaining(['owner', 'unanswered'])
     )
     expect(db.query).toHaveBeenCalledWith(
       expect.stringContaining('UPDATE issued_quizzes SET graded_result'),

@@ -1,7 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 
 import type { QuizHistoryItem } from '@/features/stores/home'
-import type { WrittenAssessmentLevel } from '@/features/stores/home'
+import type {
+  QuizAnswerStatus,
+  WrittenAssessmentLevel,
+} from '@/features/stores/home'
 import { isDatabaseConfigured, query } from '@/lib/server/db'
 import { requireSession } from '@/lib/server/auth'
 
@@ -36,6 +39,7 @@ export default async function handler(
       user_answer: string
       user_index: number | null
       is_correct: boolean
+      answer_status: QuizAnswerStatus
       assessment_level: WrittenAssessmentLevel | null
       score: number | null
       response_time_ms: number | null
@@ -59,6 +63,7 @@ export default async function handler(
           user_answer,
           user_index,
           is_correct,
+          answer_status,
           assessment_level,
           score,
           response_time_ms,
@@ -88,6 +93,7 @@ export default async function handler(
       userAnswer: row.user_answer,
       userIndex: row.user_index ?? undefined,
       correct: row.is_correct,
+      answerStatus: row.answer_status,
       assessmentLevel: row.assessment_level || undefined,
       score: row.score ?? undefined,
       responseTimeMs: row.response_time_ms ?? undefined,

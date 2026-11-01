@@ -233,4 +233,51 @@ describe('learning question sequence', () => {
       progress?.feedback?.understanding.find((item) => item.skill === 'compare')
     ).toMatchObject({ trend: 'improved', answered: 1, correct: 1 })
   })
+
+  it('counts unanswered quizzes as issued but excludes them from scored feedback', async () => {
+    const attempts = [
+      {
+        question_type: 'multiple_choice',
+        understand_skill: null,
+        question_group: 'process_management',
+        is_correct: true,
+        answer_status: 'correct',
+        assessment_level: null,
+      },
+      {
+        question_type: 'multiple_choice',
+        understand_skill: null,
+        question_group: 'cpu_scheduling',
+        is_correct: false,
+        answer_status: 'unanswered',
+        assessment_level: null,
+      },
+    ]
+    queryMock
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'session-3',
+            lesson_id: 'lesson-1',
+            total_questions: 2,
+            completed_at: null,
+          },
+        ],
+        rowCount: 1,
+      } as any)
+      .mockResolvedValueOnce({ rows: [{ count: '2' }], rowCount: 1 } as any)
+      .mockResolvedValueOnce({ rows: attempts, rowCount: 2 } as any)
+      .mockResolvedValueOnce({ rows: attempts, rowCount: 2 } as any)
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
+
+    const progress = await getLearningSetProgress('user-1', 'session-3')
+
+    expect(progress).toMatchObject({
+      issued: 2,
+      answered: 1,
+      cumulativeAnswered: 1,
+      completed: true,
+    })
+    expect(progress?.feedback).toBeUndefined()
+  })
 })

@@ -1831,6 +1831,7 @@ export const handleSendChatFn =
               ? { learningSetProgress: revealed.learningSet }
               : {}),
           })
+          homeStore.getState().appendQuizHistory(revealed.attempt, true)
           homeStore.getState().upsertMessage({
             id: generateMessageId(),
             role: 'assistant',

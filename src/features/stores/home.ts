@@ -14,6 +14,7 @@ import { Live2DModel } from 'pixi-live2d-display-lipsyncpatch'
 import { generateMessageId } from '@/utils/messageUtils'
 
 export type WrittenAssessmentLevel = 'understood' | 'partial' | 'review'
+export type QuizAnswerStatus = 'correct' | 'incorrect' | 'unanswered'
 
 export type GeneratedQuizMemory = {
   sources?: QuizSource[]
@@ -61,6 +62,7 @@ export type QuizHistoryItem = {
   userAnswer: string
   userIndex?: number | null
   correct: boolean
+  answerStatus?: QuizAnswerStatus
   assessmentLevel?: WrittenAssessmentLevel
   score?: number
   responseTimeMs?: number

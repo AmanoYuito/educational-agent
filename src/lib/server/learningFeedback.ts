@@ -180,6 +180,7 @@ export async function generateLearningFeedback(
               score, response_time_ms, explanation
        FROM quiz_attempts
        WHERE user_id = $1 AND lesson_id = $2 AND learning_session_id IS NOT NULL
+         AND answer_status <> 'unanswered'
        ORDER BY created_at ASC`,
       [userId, lessonId]
     )

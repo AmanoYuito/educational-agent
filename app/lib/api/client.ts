@@ -181,6 +181,7 @@ export type RevealQuizAnswerResponse = {
   grade: GradeQuizResponse['grade'] & {
     answerStatus: 'unanswered'
   }
+  attempt: QuizHistoryItem
   learningSet?: LearningSetProgress | null
 }
 

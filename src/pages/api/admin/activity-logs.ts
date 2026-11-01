@@ -30,6 +30,7 @@ type ActivityEventRow = {
   user_answer: string | null
   correct_answer: string | null
   is_correct: boolean | null
+  answer_status: 'correct' | 'incorrect' | 'unanswered' | null
   assessment_level: string | null
   score: number | null
   response_time_ms: number | null
@@ -114,6 +115,7 @@ const eventsCte = `
       NULL::text AS user_answer,
       NULL::text AS correct_answer,
       NULL::boolean AS is_correct,
+      NULL::text AS answer_status,
       NULL::text AS assessment_level,
       NULL::integer AS score,
       NULL::integer AS response_time_ms,
@@ -150,6 +152,7 @@ const eventsCte = `
       qa.user_answer::text AS user_answer,
       qa.correct_answer::text AS correct_answer,
       qa.is_correct::boolean AS is_correct,
+      qa.answer_status::text AS answer_status,
       qa.assessment_level::text AS assessment_level,
       qa.score::integer AS score,
       qa.response_time_ms::integer AS response_time_ms,
@@ -186,6 +189,7 @@ const eventsCte = `
       NULL::text AS user_answer,
       NULL::text AS correct_answer,
       NULL::boolean AS is_correct,
+      NULL::text AS answer_status,
       NULL::text AS assessment_level,
       NULL::integer AS score,
       NULL::integer AS response_time_ms,
@@ -222,6 +226,7 @@ const eventsCte = `
       NULL::text AS user_answer,
       NULL::text AS correct_answer,
       NULL::boolean AS is_correct,
+      NULL::text AS answer_status,
       NULL::text AS assessment_level,
       NULL::integer AS score,
       NULL::integer AS response_time_ms,
@@ -270,6 +275,7 @@ const readDate = (value: string | string[] | undefined, endOfDay = false) => {
 
 const assessmentLabel = (row: ActivityEventRow) => {
   if (row.event_type !== 'quiz') return ''
+  if (row.answer_status === 'unanswered') return '未回答'
   if (row.assessment_level === 'understood') return '理解できている'
   if (row.assessment_level === 'partial') return '一部理解'
   if (row.assessment_level === 'review') return '要復習'
@@ -520,7 +526,7 @@ export default async function handler(
       COUNT(*) FILTER (WHERE event_type = 'quiz' AND assessment_level = 'partial')::text AS quiz_partial_count,
       COUNT(*) FILTER (
         WHERE event_type = 'quiz'
-          AND (assessment_level = 'review' OR (assessment_level IS NULL AND is_correct = FALSE))
+          AND (answer_status = 'unanswered' OR assessment_level = 'review' OR (assessment_level IS NULL AND is_correct = FALSE))
       )::text AS quiz_review_count,
       ROUND(AVG(response_time_ms) FILTER (WHERE event_type = 'quiz'))::text AS average_response_ms,
       COUNT(*) FILTER (WHERE event_type = 'quiz' AND subtype = 'multiple_choice')::text AS multiple_choice_count,
@@ -614,6 +620,7 @@ export default async function handler(
       userAnswer: row.user_answer || '',
       correctAnswer: row.correct_answer || '',
       isCorrect: row.is_correct,
+      answerStatus: row.answer_status || undefined,
       assessmentLevel: row.assessment_level || '',
       score: row.score,
       responseTimeMs: row.response_time_ms,

@@ -749,17 +749,19 @@ export const AdminActivityLogs = ({ lessons }: { lessons: LessonOption[] }) => {
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-bold">正答・判定</p>
                       <span
-                        className={`font-bold ${item.isCorrect ? 'text-[#1d7041]' : 'text-[#b34a3e]'}`}
+                        className={`font-bold ${item.answerStatus === 'unanswered' ? 'text-[#6c7e99]' : item.isCorrect ? 'text-[#1d7041]' : 'text-[#b34a3e]'}`}
                       >
-                        {item.assessmentLevel === 'understood'
-                          ? '理解できている'
-                          : item.assessmentLevel === 'partial'
-                            ? '一部理解'
-                            : item.assessmentLevel === 'review'
-                              ? '要復習'
-                              : item.isCorrect
-                                ? '正解'
-                                : '不正解'}
+                        {item.answerStatus === 'unanswered'
+                          ? '未回答'
+                          : item.assessmentLevel === 'understood'
+                            ? '理解できている'
+                            : item.assessmentLevel === 'partial'
+                              ? '一部理解'
+                              : item.assessmentLevel === 'review'
+                                ? '要復習'
+                                : item.isCorrect
+                                  ? '正解'
+                                  : '不正解'}
                       </span>
                     </div>
                     <p className="mt-1 whitespace-pre-wrap break-words">

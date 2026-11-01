@@ -22,6 +22,7 @@ export type ActivityLogItem = {
   userAnswer: string
   correctAnswer: string
   isCorrect: boolean | null
+  answerStatus?: 'correct' | 'incorrect' | 'unanswered'
   assessmentLevel: string
   score: number | null
   responseTimeMs: number | null

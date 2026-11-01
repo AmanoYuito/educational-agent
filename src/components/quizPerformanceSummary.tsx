@@ -34,6 +34,9 @@ const formatAccuracy = (
   return `${Math.round((correctCount / answeredCount) * 100)}%`
 }
 
+const answerStatus = (item: QuizHistoryItem) =>
+  item.answerStatus || (item.correct ? 'correct' : 'incorrect')
+
 export const QuizAchievementBadges = ({
   className = '',
   vertical = false,
@@ -48,10 +51,12 @@ export const QuizAchievementBadges = ({
 
   const achievementStats = useMemo(() => {
     const multipleChoice = quizHistory.filter(
-      (item) => item.questionType !== 'written'
+      (item) =>
+        item.questionType !== 'written' && answerStatus(item) !== 'unanswered'
     )
     const written = quizHistory.filter(
-      (item) => item.questionType === 'written'
+      (item) =>
+        item.questionType === 'written' && answerStatus(item) !== 'unanswered'
     )
     return {
       multipleChoiceCount: multipleChoice.length,
@@ -175,13 +180,15 @@ export const QuizPerformanceSummary = ({
   const [openedAnswerIds, setOpenedAnswerIds] = useState<string[]>([])
 
   const stats = useMemo(() => {
-    const answeredCount = quizHistory.length
-    const quizCount = answeredCount
+    const quizCount = quizHistory.length
+    const answeredCount = quizHistory.filter(
+      (item) => answerStatus(item) !== 'unanswered'
+    ).length
     const correctCount = quizHistory.filter(
       (item) => item.correct === true
     ).length
     const incorrectCount = quizHistory.filter(
-      (item) => item.correct === false
+      (item) => answerStatus(item) === 'incorrect'
     ).length
 
     let currentStreak = 0
@@ -197,6 +204,7 @@ export const QuizPerformanceSummary = ({
       quizCount,
       correctCount,
       incorrectCount,
+      answeredCount,
       currentStreak,
       accuracy: formatAccuracy(correctCount, answeredCount),
     }
@@ -206,6 +214,7 @@ export const QuizPerformanceSummary = ({
     () =>
       quizHistory
         .filter((item) => {
+          if (answerStatus(item) === 'unanswered') return true
           if (!item.correct) return true
           if (typeof item.responseTimeMs !== 'number') return false
           const limit = item.questionType === 'written' ? 180000 : 60000
@@ -264,15 +273,17 @@ export const QuizPerformanceSummary = ({
                     : 'bg-[#F4ECFA] text-[#755D98]'
                 }`}
               >
-                {item.assessmentLevel === 'understood'
-                  ? '理解できている'
-                  : item.assessmentLevel === 'partial'
-                    ? '一部理解'
-                    : item.assessmentLevel === 'review'
-                      ? '要復習'
-                      : item.correct
-                        ? '正解'
-                        : '不正解'}
+                {answerStatus(item) === 'unanswered'
+                  ? '未回答'
+                  : item.assessmentLevel === 'understood'
+                    ? '理解できている'
+                    : item.assessmentLevel === 'partial'
+                      ? '一部理解'
+                      : item.assessmentLevel === 'review'
+                        ? '要復習'
+                        : item.correct
+                          ? '正解'
+                          : '不正解'}
               </span>
             ) : null}
             <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#5E79A8]">
@@ -383,8 +394,8 @@ export const QuizPerformanceSummary = ({
         <div className="chat-progress-track" aria-hidden="true">
           <div
             style={{
-              width: stats.quizCount
-                ? `${(stats.correctCount / stats.quizCount) * 100}%`
+              width: stats.answeredCount
+                ? `${(stats.correctCount / stats.answeredCount) * 100}%`
                 : '0%',
             }}
           />
@@ -553,7 +564,7 @@ export const QuizPerformanceSummary = ({
                     <p className="mt-1 text-sm leading-6 text-[#6B7F9C]">
                       {activeHistoryPanel === 'history'
                         ? `${quizHistoryLatestFirst.length}問の問題文・回答・解説を確認できます。`
-                        : `${reviewQuizHistory.length}問あります。誤答または回答に時間がかかった問題を、もう一度整理してみよう。`}
+                        : `${reviewQuizHistory.length}問あります。未回答・誤答または回答に時間がかかった問題を、もう一度整理してみよう。`}
                     </p>
                   </div>
                   <button

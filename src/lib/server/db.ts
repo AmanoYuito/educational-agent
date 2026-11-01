@@ -54,6 +54,7 @@ export const ensureLearningLogSchema = async () => {
         'understand_skill TEXT',
         'difficulty_level INTEGER',
         'question_group TEXT',
+        "answer_status TEXT NOT NULL DEFAULT 'incorrect'",
         'assessment_level TEXT',
         'score INTEGER',
         'response_time_ms INTEGER',
@@ -65,6 +66,9 @@ export const ensureLearningLogSchema = async () => {
           `ALTER TABLE quiz_attempts ADD COLUMN IF NOT EXISTS ${column}`
         )
       }
+      await db.query(
+        "UPDATE quiz_attempts SET answer_status = 'correct' WHERE is_correct = TRUE AND answer_status = 'incorrect'"
+      )
 
       await db.query(`
         CREATE TABLE IF NOT EXISTS learning_feedbacks (
@@ -190,6 +194,7 @@ export const ensureSchema = async () => {
           user_answer TEXT NOT NULL,
           user_index INTEGER,
           is_correct BOOLEAN NOT NULL,
+          answer_status TEXT NOT NULL DEFAULT 'incorrect',
           assessment_level TEXT,
           score INTEGER,
           response_time_ms INTEGER,
@@ -215,6 +220,12 @@ export const ensureSchema = async () => {
       )
       await db.query(
         'ALTER TABLE quiz_attempts ADD COLUMN IF NOT EXISTS question_group TEXT'
+      )
+      await db.query(
+        "ALTER TABLE quiz_attempts ADD COLUMN IF NOT EXISTS answer_status TEXT NOT NULL DEFAULT 'incorrect'"
+      )
+      await db.query(
+        "UPDATE quiz_attempts SET answer_status = 'correct' WHERE is_correct = TRUE AND answer_status = 'incorrect'"
       )
       await db.query(
         'ALTER TABLE quiz_attempts ADD COLUMN IF NOT EXISTS assessment_level TEXT'

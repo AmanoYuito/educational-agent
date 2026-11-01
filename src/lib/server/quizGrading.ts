@@ -259,8 +259,9 @@ export async function revealQuizAnswer(userId: string, quizId: string) {
     const result = await db.query<{
       quiz: GeneratedQuizMemory
       graded_result: any | null
+      created_at: string
     }>(
-      'SELECT quiz, graded_result FROM issued_quizzes WHERE id = $1 AND user_id = $2 FOR UPDATE',
+      'SELECT quiz, graded_result, created_at FROM issued_quizzes WHERE id = $1 AND user_id = $2 FOR UPDATE',
       [quizId, userId]
     )
     const row = result.rows[0]
@@ -301,7 +302,69 @@ export async function revealQuizAnswer(userId: string, quizId: string) {
       explanation: row.quiz.explanation || '',
       correctAnswer: `${String.fromCharCode(65 + correctIndex!)}. ${row.quiz.choices[correctIndex!]}`,
     }
-    const storedResult = { grade }
+    const quiz = row.quiz
+    const lessonId =
+      quiz.lessonId ||
+      getLessonByDatasetId(quiz.sourceDatasetId)?.id ||
+      'legacy'
+    const attempt: QuizHistoryItem = {
+      id: quizId,
+      questionPoolId: quiz.questionPoolId,
+      learningSessionId: quiz.learningSessionId,
+      questionType: 'multiple_choice',
+      understandSkill: quiz.understandSkill,
+      question: quiz.question!,
+      choices: quiz.choices,
+      quizIndex: quiz.quizIndex,
+      total: quiz.total,
+      difficultyLevel: quiz.difficultyLevel,
+      questionGroup: quiz.questionGroup,
+      correctIndex: grade.correctIndex,
+      correctAnswer: grade.correctAnswer,
+      userAnswer: grade.userAnswer,
+      userIndex: null,
+      correct: false,
+      answerStatus: 'unanswered',
+      responseTimeMs: responseTimeMs(row.created_at),
+      explanation: grade.explanation,
+      aiOutput: JSON.stringify(grade),
+      answeredAt: new Date().toISOString(),
+    }
+    await db.query(
+      `INSERT INTO quiz_attempts
+      (id, user_id, lesson_id, question_pool_id, learning_session_id, understand_skill, question, question_type, choices, quiz_index, total_questions,
+       difficulty_level, question_group, correct_index, correct_answer, user_answer, user_index,
+       is_correct, answer_status, assessment_level, score, response_time_ms, explanation, ai_output, created_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)`,
+      [
+        attempt.id,
+        userId,
+        lessonId,
+        attempt.questionPoolId ?? null,
+        attempt.learningSessionId ?? null,
+        attempt.understandSkill ?? null,
+        attempt.question,
+        attempt.questionType,
+        JSON.stringify(attempt.choices),
+        attempt.quizIndex ?? null,
+        attempt.total ?? null,
+        attempt.difficultyLevel ?? null,
+        attempt.questionGroup ?? null,
+        attempt.correctIndex,
+        attempt.correctAnswer,
+        attempt.userAnswer,
+        null,
+        false,
+        'unanswered',
+        null,
+        null,
+        attempt.responseTimeMs ?? null,
+        attempt.explanation,
+        attempt.aiOutput,
+        attempt.answeredAt,
+      ]
+    )
+    const storedResult = { grade, attempt }
     await db.query(
       'UPDATE issued_quizzes SET graded_result = $1 WHERE id = $2 AND user_id = $3',
       [JSON.stringify(storedResult), quizId, userId]
@@ -383,6 +446,7 @@ export async function gradeQuiz(
       userAnswer,
       userIndex,
       correct: grade.correct,
+      answerStatus: grade.answerStatus,
       responseTimeMs: responseTimeMs(row.created_at),
       explanation: grade.explanation,
       aiOutput: JSON.stringify(grade),
@@ -392,8 +456,8 @@ export async function gradeQuiz(
       `INSERT INTO quiz_attempts
       (id, user_id, lesson_id, question_pool_id, learning_session_id, understand_skill, question, question_type, choices, quiz_index, total_questions,
        difficulty_level, question_group, correct_index, correct_answer, user_answer, user_index,
-       is_correct, assessment_level, score, response_time_ms, explanation, ai_output, created_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
+       is_correct, answer_status, assessment_level, score, response_time_ms, explanation, ai_output, created_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)`,
       [
         attempt.id,
         userId,
@@ -413,6 +477,7 @@ export async function gradeQuiz(
         userAnswer,
         userIndex,
         attempt.correct,
+        attempt.answerStatus,
         null,
         null,
         attempt.responseTimeMs ?? null,
@@ -531,6 +596,7 @@ export async function saveWrittenQuizGrade(
       userAnswer,
       userIndex: null,
       correct: grade.correct,
+      answerStatus: grade.answerStatus,
       assessmentLevel,
       score: evaluation.score,
       responseTimeMs: responseTimeMs(row.created_at),
@@ -542,8 +608,8 @@ export async function saveWrittenQuizGrade(
       `INSERT INTO quiz_attempts
       (id, user_id, lesson_id, question_pool_id, learning_session_id, understand_skill, question, question_type, choices, quiz_index, total_questions,
        difficulty_level, question_group, correct_index, correct_answer, user_answer, user_index,
-       is_correct, assessment_level, score, response_time_ms, explanation, ai_output, created_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
+       is_correct, answer_status, assessment_level, score, response_time_ms, explanation, ai_output, created_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)`,
       [
         attempt.id,
         userId,
@@ -563,6 +629,7 @@ export async function saveWrittenQuizGrade(
         userAnswer,
         null,
         attempt.correct,
+        attempt.answerStatus,
         attempt.assessmentLevel,
         attempt.score ?? null,
         attempt.responseTimeMs ?? null,

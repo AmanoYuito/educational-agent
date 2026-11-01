@@ -282,7 +282,15 @@ describe('handlers', () => {
       expect(state.chatProcessing).toBe(false)
     })
 
-    it('reveals the answer as unanswered without appending answer history', async () => {
+    it('adds a revealed unanswered quiz to history and review candidates', async () => {
+      const attempt = {
+        id: 'issued-id',
+        question: 'どれ？',
+        choices: ['a', 'b', 'c', 'd'],
+        correct: false,
+        answerStatus: 'unanswered',
+        userAnswer: 'ー',
+      }
       ;(revealQuizAnswer as jest.Mock).mockResolvedValue({
         grade: {
           type: 'grade',
@@ -296,6 +304,7 @@ describe('handlers', () => {
           explanation: 'SERVER_EXPLANATION',
           correctAnswer: 'B. b',
         },
+        attempt,
       })
 
       await handleSendChatFn()('答えと解説を教えてください。', {
@@ -304,7 +313,7 @@ describe('handlers', () => {
 
       expect(revealQuizAnswer).toHaveBeenCalledWith('issued-id')
       expect(submitQuizAnswer).not.toHaveBeenCalled()
-      expect(state.appendQuizHistory).not.toHaveBeenCalled()
+      expect(state.appendQuizHistory).toHaveBeenCalledWith(attempt, true)
       expect(state.latestGeneratedQuizMemory).toMatchObject({
         awaitingAnswer: false,
         lastUserAnswer: 'ー',

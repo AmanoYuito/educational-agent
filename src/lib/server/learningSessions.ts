@@ -31,6 +31,7 @@ type AttemptRow = {
   understand_skill: UnderstandSkill | null
   question_group: string | null
   is_correct: boolean
+  answer_status: 'correct' | 'incorrect' | 'unanswered'
   assessment_level: 'understood' | 'partial' | 'review' | null
 }
 
@@ -381,22 +382,29 @@ export async function getLearningSetProgress(
       [sessionId, userId]
     ),
     query<AttemptRow>(
-      `SELECT question_type, understand_skill, question_group, is_correct, assessment_level
+      `SELECT question_type, understand_skill, question_group, is_correct, answer_status, assessment_level
        FROM quiz_attempts WHERE learning_session_id = $1 AND user_id = $2
        ORDER BY created_at ASC`,
       [sessionId, userId]
     ),
     query<AttemptRow>(
-      `SELECT question_type, understand_skill, question_group, is_correct, assessment_level
+      `SELECT question_type, understand_skill, question_group, is_correct, answer_status, assessment_level
        FROM quiz_attempts
        WHERE user_id = $1 AND lesson_id = $2 AND learning_session_id IS NOT NULL
        ORDER BY created_at ASC`,
       [userId, session.lesson_id]
     ),
   ])
-  const answered = attemptsResult.rows.length
-  const cumulativeAnswered = allAttemptsResult.rows.length
-  const completed = answered >= session.total_questions
+  const issued = Number(issuedResult.rows[0]?.count || 0)
+  const scoredAttempts = attemptsResult.rows.filter(
+    (attempt) => attempt.answer_status !== 'unanswered'
+  )
+  const allScoredAttempts = allAttemptsResult.rows.filter(
+    (attempt) => attempt.answer_status !== 'unanswered'
+  )
+  const answered = scoredAttempts.length
+  const cumulativeAnswered = allScoredAttempts.length
+  const completed = issued >= session.total_questions
   if (completed && !session.completed_at) {
     await query(
       'UPDATE learning_sessions SET completed_at = now(), updated_at = now() WHERE id = $1 AND completed_at IS NULL',
@@ -407,7 +415,7 @@ export async function getLearningSetProgress(
   const checkpointAnswered =
     cumulativeAnswered >= 10 ? cumulativeAnswered - (cumulativeAnswered % 5) : 0
   const feedback = checkpointAnswered
-    ? buildFeedback(allAttemptsResult.rows, checkpointAnswered)
+    ? buildFeedback(allScoredAttempts, checkpointAnswered)
     : undefined
   if (feedback) {
     const cachedFeedback = await query<{ feedback_text: string }>(
@@ -427,7 +435,7 @@ export async function getLearningSetProgress(
   return {
     sessionId,
     total: session.total_questions,
-    issued: Number(issuedResult.rows[0]?.count || 0),
+    issued,
     answered,
     cumulativeAnswered,
     completed,
