@@ -649,9 +649,18 @@ const getQuizCardServerId = (message: Message): string => {
   return String((quiz as any).serverQuizId || message.meta?.serverQuizId || '')
 }
 
+const isQuizReminderMessage = (message: Message): boolean => {
+  if (message.role === 'user' || typeof message.content !== 'string')
+    return false
+  const parsed = tryParseDifyJson(message.content)
+  const payloads = Array.isArray(parsed) ? parsed : parsed ? [parsed] : []
+  return payloads.some((payload) => (payload as any)?.quizReminder === true)
+}
+
 export const ChatLog = ({ modern = false }: { modern?: boolean }) => {
   const chatScrollRef = useRef<HTMLDivElement>(null)
   const chatLogRef = useRef<HTMLDivElement>(null)
+  const hasAutoScrolledRef = useRef(false)
 
   // Prevent re-triggering emotions when the chat list re-renders
   const firedGradeKeysRef = useRef<Set<string>>(new Set())
@@ -675,6 +684,28 @@ export const ChatLog = ({ modern = false }: { modern?: boolean }) => {
     })
     return indexes
   }, [quizCardServerIds])
+  const scrollTarget = useMemo(() => {
+    const lastIndex = messages.length - 1
+    if (lastIndex < 0 || !isQuizReminderMessage(messages[lastIndex])) {
+      return { index: lastIndex, explanationFirst: false }
+    }
+
+    let latestUserIndex = -1
+    for (let index = lastIndex - 1; index >= 0; index -= 1) {
+      if (messages[index].role === 'user') {
+        latestUserIndex = index
+        break
+      }
+    }
+    const firstExplanationIndex = latestUserIndex + 1
+    return {
+      index:
+        firstExplanationIndex >= 0 && firstExplanationIndex < lastIndex
+          ? firstExplanationIndex
+          : lastIndex,
+      explanationFirst: firstExplanationIndex < lastIndex,
+    }
+  }, [messages])
 
   if (initialMessageKeysRef.current.size === 0 && messages.length > 0) {
     initialMessageKeysRef.current = new Set(
@@ -684,17 +715,11 @@ export const ChatLog = ({ modern = false }: { modern?: boolean }) => {
 
   useEffect(() => {
     chatScrollRef.current?.scrollIntoView({
-      behavior: 'auto',
-      block: 'center',
+      behavior: hasAutoScrolledRef.current ? 'smooth' : 'auto',
+      block: scrollTarget.explanationFirst ? 'start' : 'center',
     })
-  }, [])
-
-  useEffect(() => {
-    chatScrollRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-    })
-  }, [messages])
+    hasAutoScrolledRef.current = true
+  }, [messages, scrollTarget.explanationFirst])
 
   return (
     <div
@@ -737,7 +762,7 @@ export const ChatLog = ({ modern = false }: { modern?: boolean }) => {
           const skipInitialLive2D =
             initialMessageKeysRef.current.has(messageKey)
           return (
-            <div key={i} ref={messages.length - 1 === i ? chatScrollRef : null}>
+            <div key={i} ref={scrollTarget.index === i ? chatScrollRef : null}>
               {typeof msg.content === 'string' ? (
                 <Chat
                   messageKey={messageKey}
@@ -1308,7 +1333,7 @@ const DifyJsonCard = ({
         ) : null}
         {isQuizReminder ? (
           <div className="rounded-xl border border-[#BCD0EE] bg-[#EEF5FF] px-4 py-3 text-sm font-bold leading-6 text-[#345A98]">
-            説明を参考に、同じ問題にもう一度答えてみよう。
+            説明を参考に、答えてみよう。
           </div>
         ) : null}
         {introText ? (
