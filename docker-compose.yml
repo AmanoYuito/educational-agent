@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aituber_user
+      POSTGRES_PASSWORD: aituber_password
+      POSTGRES_DB: aituber_kit
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U aituber_user -d aituber_kit']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_PATH: ''
+        PUBLIC_PATH: '/amano'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - '3001:3000'
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://aituber_user:aituber_password@postgres:5432/aituber_kit
+      DATABASE_SSL: 'false'
+      COOKIE_SECURE: 'true'
+      BASE_PATH: ''
+      PUBLIC_PATH: '/amano'
+
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

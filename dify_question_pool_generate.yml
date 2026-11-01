@@ -1,0 +1,228 @@
+app:
+  description: 事前生成して question_pool に保存するための4択問題を1問ずつ作る
+  icon: 🧩
+  icon_background: '#E8F5E9'
+  icon_type: emoji
+  mode: advanced-chat
+  name: 問題プール生成用
+  use_icon_as_answer_icon: false
+dependencies:
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/openai:0.2.10@7ca552fb9e48caa4deddfdef5aa71c200d06d03c26c2e8bb428b3250101b9cb3
+    version: null
+kind: app
+version: 0.6.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions: []
+      allowed_file_types: []
+      allowed_file_upload_methods: []
+      enabled: false
+      fileUploadConfig:
+        attachment_image_file_size_limit: 2
+        audio_file_size_limit: 50
+        batch_count_limit: 5
+        file_size_limit: 15
+        file_upload_limit: 50
+        image_file_batch_limit: 10
+        image_file_size_limit: 10
+        single_chunk_attachment_limit: 10
+        video_file_size_limit: 100
+        workflow_file_upload_limit: 10
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods: []
+      number_limits: 3
+    opening_statement: ''
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: llm
+      id: start-source-llm-target
+      source: start
+      sourceHandle: source
+      target: llm_generate_pool
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        sourceType: llm
+        targetType: answer
+      id: llm-source-answer-target
+      source: llm_generate_pool
+      sourceHandle: source
+      target: answer
+      targetHandle: target
+      type: custom
+    nodes:
+    - data:
+        selected: false
+        title: ユーザー入力
+        type: start
+        variables:
+        - default: ''
+          hint: 問題の主題。例: SMTP, TCP/IP, ビジネスメール
+          label: topic
+          options: []
+          placeholder: SMTP
+          required: false
+          type: text-input
+          variable: topic
+        - default: ''
+          hint: 直前の学習内容や会話要約
+          label: conversation_context
+          options: []
+          placeholder: 直前会話の要約
+          required: false
+          type: paragraph
+          variable: conversation_context
+        - default: ''
+          hint: 教材本文や追加知識
+          label: source_context
+          options: []
+          placeholder: 教材本文
+          required: false
+          type: paragraph
+          variable: source_context
+        - default: '3'
+          hint: 1〜5 の整数
+          label: difficulty_level
+          options: []
+          placeholder: '3'
+          required: false
+          type: text-input
+          variable: difficulty_level
+        - default: ''
+          hint: 苦手分析用の短い分類名
+          label: question_group
+          options: []
+          placeholder: mail_protocol
+          required: false
+          type: text-input
+          variable: question_group
+      height: 244
+      id: start
+      position:
+        x: 80
+        y: 240
+      positionAbsolute:
+        x: 80
+        y: 240
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        model:
+          completion_params:
+            temperature: 0.4
+          mode: chat
+          name: gpt-4o-mini
+          provider: langgenius/openai/openai
+        prompt_template:
+        - id: prompt-generate-question-pool
+          role: system
+          text: "あなたは「問題プール生成LLM」です。\n\
+            \n入力:\n\
+            - topic: {{#start.topic#}}\n\
+            - conversation_context: {{#start.conversation_context#}}\n\
+            - source_context: {{#start.source_context#}}\n\
+            - difficulty_level: {{#start.difficulty_level#}}\n\
+            - question_group: {{#start.question_group#}}\n\
+            \n目的:\n\
+            学習者用の4択問題を1問だけ作成し、問題プール登録用のJSONを返してください。\n\
+            \n出力条件:\n\
+            - JSONオブジェクトだけを返す\n\
+            - Markdown、コードフェンス、補足文、前置き、推論過程は出さない\n\
+            - difficultyLevel は 1〜5 の整数\n\
+            - questionGroup は短い分類名にする\n\
+            - choices は4件\n\
+            - wrongAnswers は誤答3件\n\
+            - correctIndex は 0 始まり\n\
+            - correctAnswer は choices[correctIndex] と完全一致させる\n\
+            - explanation は簡潔だが学習者が復習に使える内容にする\n\
+            - 過度なひっかけ問題にしない\n\
+            \n出力形式:\n\
+            {\n\
+              \"question\": \"問題文\",\n\
+              \"choices\": [\"選択肢1\", \"選択肢2\", \"選択肢3\", \"選択肢4\"],\n\
+              \"correctIndex\": 0,\n\
+              \"correctAnswer\": \"正答\",\n\
+              \"wrongAnswers\": [\"誤答1\", \"誤答2\", \"誤答3\"],\n\
+              \"explanation\": \"解説\",\n\
+              \"difficultyLevel\": 3,\n\
+              \"questionGroup\": \"mail_protocol\"\n\
+            }\n\
+            \n優先規則:\n\
+            1. topic があれば最優先で使う\n\
+            2. conversation_context があればその流れに関連づける\n\
+            3. source_context があれば内容に沿う\n\
+            4. question_group が空なら topic から短い分類名を自分で決める\n\
+            5. difficulty_level が空なら 3 を使う"
+        selected: false
+        title: LLM 問題プール生成
+        type: llm
+        vision:
+          enabled: false
+      height: 88
+      id: llm_generate_pool
+      position:
+        x: 430
+        y: 318
+      positionAbsolute:
+        x: 430
+        y: 318
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        answer: '{{#llm_generate_pool.text#}}'
+        selected: false
+        title: 回答
+        type: answer
+        variables: []
+      height: 103
+      id: answer
+      position:
+        x: 770
+        y: 312
+      positionAbsolute:
+        x: 770
+        y: 312
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.9
