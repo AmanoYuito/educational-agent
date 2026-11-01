@@ -1,4 +1,9 @@
-export type QuestionKnowledgeSource = { id: string; name: string }
+export type QuestionKnowledgeSource = {
+  id: string
+  name: string
+  /** Keep legacy sources available for historical labels, but hide them from new generation. */
+  selectable?: boolean
+}
 
 export type PoolQuestionType = 'multiple_choice' | 'written'
 export type PoolBloomLevel = 'remember' | 'understand'

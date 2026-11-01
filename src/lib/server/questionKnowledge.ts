@@ -11,7 +11,8 @@ const referenceKnowledgeIds = new Set(
 
 export const selectableQuestionKnowledgeSources =
   questionKnowledgeSources.filter(
-    (source) => !referenceKnowledgeIds.has(source.id)
+    (source) =>
+      source.selectable !== false && !referenceKnowledgeIds.has(source.id)
   )
 
 // The browser may select only a registered source, never an arbitrary dataset.

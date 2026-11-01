@@ -60,6 +60,14 @@ export function slideNumbersFromMaterial(
   content: string
 ) {
   const numbers = new Set<number>()
+  for (const match of content.matchAll(
+    /スライドID:\s*cs2-lesson-\d+-slide-(\d{1,3})(?=\b)/g
+  )) {
+    numbers.add(Number(match[1]))
+  }
+  // A bundled document can contain many slides. Its explicit slide ID takes
+  // precedence over any old single-slide filename retained by Dify on update.
+  if (numbers.size) return [...numbers].sort((a, b) => a - b)
   const fromName = documentName.match(/lesson-\d+-slide-(\d{1,3})\.md$/i)
   if (fromName) numbers.add(Number(fromName[1]))
   for (const match of content.matchAll(
@@ -195,6 +203,10 @@ export async function selectQuestionMaterial(
       const center = doc.segments[i]
       if (rejected.has(sourceId(doc, center))) continue
       if (isNavigationOnly(segmentText(center))) continue
+      const centerSlides = slideNumbersFromMaterial(
+        doc.name,
+        segmentText(center)
+      )
       const chosen = [center]
       let length = heading.length + segmentText(center).length
       if (length > maxCharacters) continue // Do not cut a sentence midway.
@@ -205,6 +217,19 @@ export async function selectQuestionMaterial(
           isNavigationOnly(segmentText(neighbor)) ||
           Math.abs(neighbor.position - center.position) !== 1 ||
           rejected.has(sourceId(doc, neighbor))
+        )
+          continue
+        const neighborSlides = slideNumbersFromMaterial(
+          doc.name,
+          segmentText(neighbor)
+        )
+        if (
+          centerSlides.length &&
+          neighborSlides.length &&
+          (centerSlides.length !== neighborSlides.length ||
+            centerSlides.some(
+              (slide, position) => slide !== neighborSlides[position]
+            ))
         )
           continue
         const extra = segmentText(neighbor).length + 2

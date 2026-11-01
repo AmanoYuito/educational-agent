@@ -170,7 +170,7 @@ describe('Dify quiz issuance', () => {
     expect(res.statusCode).toBe(200)
     const sent = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)
     expect(sent.inputs.source_dataset_id).toBe(
-      '77c078e6-38c1-4037-86cd-c3b0591a7970'
+      '29d449a2-dcd6-4b37-b81f-7ac210f7e8dc'
     )
     expect(sent.inputs).not.toHaveProperty('lesson_id')
   })

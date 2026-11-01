@@ -53,6 +53,12 @@ describe('random material selection from real knowledge content', () => {
         '# 第4回 スライド13 共有資源\n# 第4回 スライド14 同期'
       )
     ).toEqual([13, 14])
+    expect(
+      slideNumbersFromMaterial(
+        'cs2-lesson-04-slide-03.md',
+        '第4回 スライド13 共有資源\nスライドID: cs2-lesson-04-slide-13\n本文: 共有資源'
+      )
+    ).toEqual([13])
   })
   const oldEnv = { ...process.env }
   let serial = 0
@@ -119,6 +125,26 @@ describe('random material selection from real knowledge content', () => {
     await expect(selectQuestionMaterial()).rejects.toThrow(
       '別の本文がありません'
     )
+  })
+  it('keeps neighboring chunks from different slides separate in a bundled document', async () => {
+    mockPages(
+      page([{ ...doc, name: 'cs2-lesson-04-slides.txt' }]),
+      page([
+        segment(1, {
+          content:
+            '第4回 スライド3 同期\nスライドID: cs2-lesson-04-slide-03\n本文: ' +
+            '共有資源を管理する。'.repeat(12),
+        }),
+        segment(2, {
+          content:
+            '第4回 スライド4 排他制御\nスライドID: cs2-lesson-04-slide-04\n本文: ' +
+            '同時実行を制御する。'.repeat(12),
+        }),
+      ])
+    )
+    const selected = await selectQuestionMaterial()
+    expect(selected.sourceIds).toEqual([sourceId(1)])
+    expect(selected.slideNumbers).toEqual([3])
   })
   it('prefers unused ranges and reuses them only after exhausting fresh material', async () => {
     mockPages(

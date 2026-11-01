@@ -1,8 +1,10 @@
 [
   { "id": "6c1f831e-9649-49e8-8d3d-acfc646487b9", "name": "johokiso3-1" },
   { "id": "8a85cfc6-364c-420e-90a5-065e06596caf", "name": "johokiso7" },
-  { "id": "77c078e6-38c1-4037-86cd-c3b0591a7970", "name": "コンシス第3回" },
-  { "id": "6bc9b51b-f22e-49b3-bdfa-54021d5e9d7a", "name": "コンシス第4回.pdf" },
+  { "id": "29d449a2-dcd6-4b37-b81f-7ac210f7e8dc", "name": "コンシス第3回_スライド別" },
+  { "id": "09b9b1b2-95c4-4c63-b5a7-95fc23a44721", "name": "コンシス第4回_スライド別" },
+  { "id": "77c078e6-38c1-4037-86cd-c3b0591a7970", "name": "コンシス第3回（旧）", "selectable": false },
+  { "id": "6bc9b51b-f22e-49b3-bdfa-54021d5e9d7a", "name": "コンシス第4回.pdf（旧）", "selectable": false },
   { "id": "c619b5fb-e475-4184-9f3c-c04c693be07f", "name": "オペレーティングシステムの基礎（第3回補足）" },
   { "id": "a4c88fb6-23f5-4d4a-89f0-fa2c51f7253a", "name": "オペレーティングシステムの基礎（第4回補足）" }
 ]
