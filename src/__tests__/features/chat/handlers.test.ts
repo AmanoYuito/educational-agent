@@ -282,6 +282,50 @@ describe('handlers', () => {
       expect(state.chatProcessing).toBe(false)
     })
 
+    it('answers a question about an option and then redisplays the same quiz', async () => {
+      ;(getDifyChatResponse as jest.Mock).mockResolvedValue({
+        text: 'aについての説明です。',
+        segments: [
+          {
+            text: 'aについての説明です。',
+            html: null,
+            is_html: false,
+          },
+        ],
+      })
+
+      await handleSendChatFn()('aについて教えて')
+
+      expect(submitQuizAnswer).not.toHaveBeenCalled()
+      expect(getDifyChatResponse).toHaveBeenCalled()
+      expect(state.latestGeneratedQuizMemory).toMatchObject({
+        serverQuizId: 'issued-id',
+        awaitingAnswer: true,
+      })
+      const reminderCall = state.upsertMessage.mock.calls.find(
+        ([message]: any[]) => {
+          if (message.role !== 'assistant') return false
+          try {
+            return JSON.parse(message.content).quizReminder === true
+          } catch {
+            return false
+          }
+        }
+      )
+      const reminderMessage = reminderCall?.[0]
+      expect(reminderMessage).toMatchObject({
+        role: 'assistant',
+        meta: expect.objectContaining({ serverQuizId: 'issued-id' }),
+      })
+      expect(JSON.parse(String(reminderMessage?.content))).toMatchObject({
+        type: 'quiz',
+        serverQuizId: 'issued-id',
+        question: 'どれ？',
+        choices: ['a', 'b', 'c', 'd'],
+        quizReminder: true,
+      })
+    })
+
     it('adds a revealed unanswered quiz to history and review candidates', async () => {
       const attempt = {
         id: 'issued-id',

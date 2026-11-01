@@ -414,15 +414,6 @@ const parseQuizAnswerIndex = (
   )
   if (exactIndex >= 0) return exactIndex
 
-  const partialMatches = normalizedChoices
-    .map((choice, index) => ({ choice, index }))
-    .filter(
-      ({ choice }) => normalized.includes(choice) || choice.includes(normalized)
-    )
-  if (partialMatches.length === 1) {
-    return partialMatches[0].index
-  }
-
   return null
 }
 
@@ -430,7 +421,9 @@ const buildQuizMemorySystemPrompt = (
   quizMemory: GeneratedQuizMemory
 ): string => {
   const sections = [
-    '以下は直近に生成した問題の記憶です。ユーザーがこの問題について質問した場合は、この内容を前提に答えてください。別の話題なら通常どおり会話してください。',
+    quizMemory.awaitingAnswer
+      ? '以下は現在出題中の問題です。学習者から用語や内容について質問された場合は、問題に回答しやすくなる説明やヒントを日本語で返してください。ただし、正解の記号・正解の選択肢・採点結果・保存済み解説は直接明かさず、問題のJSONや同じ問題文も出力しないでください。「答えを教えて」など正答の開示を求められた場合は、画面の「答えを見る」を使うと未回答として正答と解説を確認できると案内してください。別の話題なら通常どおり会話してください。'
+      : '以下は直近に生成した問題の記憶です。ユーザーがこの問題について質問した場合は、この内容を前提に答えてください。別の話題なら通常どおり会話してください。',
   ]
 
   if (quizMemory.question) {
@@ -449,17 +442,50 @@ const buildQuizMemorySystemPrompt = (
     )
   }
 
-  if (quizMemory.answer) {
+  if (!quizMemory.awaitingAnswer && quizMemory.answer) {
     sections.push(`正解: ${quizMemory.answer}`)
   }
 
-  if (quizMemory.explanation) {
+  if (!quizMemory.awaitingAnswer && quizMemory.explanation) {
     sections.push(`解説: ${quizMemory.explanation}`)
-  } else {
+  } else if (!quizMemory.awaitingAnswer) {
     sections.push(`問題全文: ${quizMemory.rawText}`)
   }
 
   return sections.join('\n')
+}
+
+const appendPendingQuizReminder = (quizMemory: GeneratedQuizMemory) => {
+  const latest = homeStore.getState().latestGeneratedQuizMemory
+  if (
+    !quizMemory.serverQuizId ||
+    !latest?.awaitingAnswer ||
+    latest.serverQuizId !== quizMemory.serverQuizId ||
+    !latest.choices?.length
+  ) {
+    return
+  }
+
+  homeStore.getState().upsertMessage({
+    id: generateMessageId(),
+    role: 'assistant',
+    content: JSON.stringify({
+      type: 'quiz',
+      serverQuizId: latest.serverQuizId,
+      question: latest.question,
+      choices: latest.choices,
+      quizIndex: latest.quizIndex,
+      total: latest.total,
+      quizReminder: true,
+    }),
+    meta: {
+      serverQuizId: latest.serverQuizId,
+      quiz: {
+        question: latest.question,
+        choices: latest.choices,
+      },
+    },
+  })
 }
 
 const buildQuestionPoolQuizMemory = (
@@ -1769,24 +1795,14 @@ export const handleSendChatFn =
           newMessage,
           activeQuizMemory.choices
         )
-
-        if (parsedMultipleChoiceAnswerIndex === null) {
-          const retryMessage =
-            'A〜D、1〜4、または選択肢の文そのもので答えてね。'
-          applyQuizEmotion('frustrated1')
-          homeStore.getState().upsertMessage({
-            id: generateMessageId(),
-            role: 'assistant',
-            content: retryMessage,
-            meta: {
-              emotion: 'frustrated1',
-            },
-          })
-          await speakMessageHandler(retryMessage, { skipUpsert: true })
-          homeStore.setState({ chatProcessing: false })
-          return
-        }
       }
+      const shouldRedisplayActiveQuiz = Boolean(
+        !shouldRevealQuizAnswer &&
+          activeQuizMemory?.awaitingAnswer &&
+          activeQuizMemory.serverQuizId &&
+          activeQuizMemory.choices?.length &&
+          parsedMultipleChoiceAnswerIndex === null
+      )
 
       homeStore.getState().upsertMessage({
         role: 'user',
@@ -2178,6 +2194,10 @@ export const handleSendChatFn =
       } catch (e) {
         console.error(e)
         homeStore.setState({ chatProcessing: false })
+      } finally {
+        if (shouldRedisplayActiveQuiz && activeQuizMemory) {
+          appendPendingQuizReminder(activeQuizMemory)
+        }
       }
     }
   }

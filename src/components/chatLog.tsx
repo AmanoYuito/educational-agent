@@ -638,6 +638,17 @@ const AssistantIdentity = ({
   )
 }
 
+const getQuizCardServerId = (message: Message): string => {
+  if (message.role === 'user' || typeof message.content !== 'string') return ''
+  const parsed = tryParseDifyJson(message.content)
+  const payloads = Array.isArray(parsed) ? parsed : parsed ? [parsed] : []
+  const quiz = payloads.find((payload) => (payload as any)?.type === 'quiz') as
+    | DifyJsonMessage
+    | undefined
+  if (!quiz) return ''
+  return String((quiz as any).serverQuizId || message.meta?.serverQuizId || '')
+}
+
 export const ChatLog = ({ modern = false }: { modern?: boolean }) => {
   const chatScrollRef = useRef<HTMLDivElement>(null)
   const chatLogRef = useRef<HTMLDivElement>(null)
@@ -653,6 +664,17 @@ export const ChatLog = ({ modern = false }: { modern?: boolean }) => {
   const messages = messageSelectors.getTextAndImageMessages(
     homeStore((s) => s.chatLog)
   )
+  const quizCardServerIds = useMemo(
+    () => messages.map(getQuizCardServerId),
+    [messages]
+  )
+  const latestQuizCardIndexes = useMemo(() => {
+    const indexes = new Map<string, number>()
+    quizCardServerIds.forEach((serverQuizId, index) => {
+      if (serverQuizId) indexes.set(serverQuizId, index)
+    })
+    return indexes
+  }, [quizCardServerIds])
 
   if (initialMessageKeysRef.current.size === 0 && messages.length > 0) {
     initialMessageKeysRef.current = new Set(
@@ -707,6 +729,11 @@ export const ChatLog = ({ modern = false }: { modern?: boolean }) => {
         )}
         {messages.map((msg, i) => {
           const messageKey = msg.id ?? `${msg.role}-${i}`
+          const quizCardServerId = quizCardServerIds[i]
+          const collapseQuizCard = Boolean(
+            quizCardServerId &&
+              (latestQuizCardIndexes.get(quizCardServerId) ?? i) > i
+          )
           const skipInitialLive2D =
             initialMessageKeysRef.current.has(messageKey)
           return (
@@ -722,6 +749,7 @@ export const ChatLog = ({ modern = false }: { modern?: boolean }) => {
                   characterName={characterName}
                   firedGradeKeysRef={firedGradeKeysRef}
                   isLast={i === messages.length - 1}
+                  collapseQuizCard={collapseQuizCard}
                   skipInitialLive2D={skipInitialLive2D}
                 />
               ) : (
@@ -736,6 +764,7 @@ export const ChatLog = ({ modern = false }: { modern?: boolean }) => {
                     characterName={characterName}
                     firedGradeKeysRef={firedGradeKeysRef}
                     isLast={i === messages.length - 1}
+                    collapseQuizCard={collapseQuizCard}
                     skipInitialLive2D={skipInitialLive2D}
                   />
                   <ChatImage
@@ -763,6 +792,7 @@ const Chat = ({
   characterName,
   firedGradeKeysRef,
   isLast,
+  collapseQuizCard,
   skipInitialLive2D,
 }: {
   messageKey: string
@@ -774,6 +804,7 @@ const Chat = ({
   characterName: string
   firedGradeKeysRef: React.MutableRefObject<Set<string>>
   isLast: boolean
+  collapseQuizCard: boolean
   skipInitialLive2D: boolean
 }) => {
   useEffect(() => {
@@ -989,6 +1020,7 @@ const Chat = ({
                       gradeKey={`${messageKey}|${idx}`}
                       firedGradeKeysRef={firedGradeKeysRef}
                       isLast={isLast}
+                      collapseQuizCard={collapseQuizCard}
                       skipInitialLive2D={skipInitialLive2D}
                     />
                   ))}
@@ -1004,6 +1036,7 @@ const Chat = ({
                   gradeKey={messageKey}
                   firedGradeKeysRef={firedGradeKeysRef}
                   isLast={isLast}
+                  collapseQuizCard={collapseQuizCard}
                   skipInitialLive2D={skipInitialLive2D}
                 />
               )
@@ -1056,6 +1089,7 @@ const Chat = ({
                           gradeKey={`${messageKey}|${idx}`}
                           firedGradeKeysRef={firedGradeKeysRef}
                           isLast={isLast}
+                          collapseQuizCard={collapseQuizCard}
                           skipInitialLive2D={skipInitialLive2D}
                         />
                       ))}
@@ -1071,6 +1105,7 @@ const Chat = ({
                       gradeKey={messageKey}
                       firedGradeKeysRef={firedGradeKeysRef}
                       isLast={isLast}
+                      collapseQuizCard={collapseQuizCard}
                       skipInitialLive2D={skipInitialLive2D}
                     />
                   )
@@ -1113,6 +1148,7 @@ const DifyJsonCard = ({
   gradeKey,
   firedGradeKeysRef,
   isLast,
+  collapseQuizCard,
   skipInitialLive2D,
 }: {
   role: string
@@ -1120,6 +1156,7 @@ const DifyJsonCard = ({
   gradeKey: string
   firedGradeKeysRef: React.MutableRefObject<Set<string>>
   isLast: boolean
+  collapseQuizCard: boolean
   skipInitialLive2D: boolean
 }) => {
   const chatProcessing = homeStore((s) => s.chatProcessing)
@@ -1131,6 +1168,7 @@ const DifyJsonCard = ({
   const handleSendChat = useMemo(() => handleSendChatFn(), [])
   const [reflection, setReflection] = useState('')
   const [reflectionSent, setReflectionSent] = useState(false)
+  const [collapsedQuizExpanded, setCollapsedQuizExpanded] = useState(false)
   const answeredQuizCount = useMemo(
     () =>
       chatLog.filter(
@@ -1198,6 +1236,27 @@ const DifyJsonCard = ({
           ? latestGeneratedQuizMemory.total
           : undefined
     const rawQuestion = String(q || '').trim()
+    const isCollapsedQuiz = collapseQuizCard || (data as any).collapsed === true
+    const isQuizReminder = (data as any).quizReminder === true
+
+    if (isCollapsedQuiz && !collapsedQuizExpanded) {
+      return (
+        <button
+          type="button"
+          onClick={() => setCollapsedQuizExpanded(true)}
+          className="flex w-full items-center justify-between gap-3 rounded-xl border border-[#C7D7EA] bg-[#F7FAFE] px-4 py-3 text-left text-sm font-bold text-[#526682] transition-colors hover:bg-[#EEF4FC]"
+          aria-expanded="false"
+        >
+          <span>
+            {typeof quizIndex === 'number'
+              ? `${quizIndex}問目の問題（説明前）`
+              : '説明前の問題'}
+          </span>
+          <span className="text-xs text-[#2D62B5]">問題を表示</span>
+        </button>
+      )
+    }
+
     let introText = ''
     let questionText = rawQuestion
     const splitByBlankLine = rawQuestion
@@ -1235,6 +1294,23 @@ const DifyJsonCard = ({
     const choiceList = Array.isArray(choices) ? choices.map(String) : []
     return (
       <div className="space-y-3">
+        {isCollapsedQuiz ? (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setCollapsedQuizExpanded(false)}
+              className="rounded-lg border border-[#C7D7EA] bg-white px-3 py-1.5 text-xs font-bold text-[#526682] hover:bg-[#F7FAFE]"
+              aria-expanded="true"
+            >
+              問題を折りたたむ
+            </button>
+          </div>
+        ) : null}
+        {isQuizReminder ? (
+          <div className="rounded-xl border border-[#BCD0EE] bg-[#EEF5FF] px-4 py-3 text-sm font-bold leading-6 text-[#345A98]">
+            説明を参考に、同じ問題にもう一度答えてみよう。
+          </div>
+        ) : null}
         {introText ? (
           <div className="rounded-xl border border-[#C7D7EA] bg-white/98 p-4 font-bold whitespace-pre-line text-[#24324A]">
             {insertSentenceLineBreaks(introText)}
