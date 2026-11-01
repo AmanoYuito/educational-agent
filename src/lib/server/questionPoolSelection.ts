@@ -107,6 +107,53 @@ export const toQuestionPoolItem = (row: QuestionPoolRow): QuestionPoolItem => ({
   understandSkill: row.understand_skill || undefined,
 })
 
+/**
+ * 保存済みの並び順は変更せず、出題用スナップショットだけを並べ替える。
+ * 正解は選択肢本文ではなく元のインデックスで追跡するため、同じ文言が
+ * 複数含まれていても正解位置を安全に更新できる。
+ */
+export const shuffleQuestionPoolItemChoices = (
+  item: QuestionPoolItem,
+  random: () => number = Math.random
+): QuestionPoolItem => {
+  if (
+    item.questionType !== 'multiple_choice' ||
+    !item.choices ||
+    item.choices.length < 2 ||
+    !Number.isInteger(item.correctIndex) ||
+    item.correctIndex! < 0 ||
+    item.correctIndex! >= item.choices.length
+  ) {
+    return item
+  }
+
+  const choices = item.choices.map((choice, originalIndex) => ({
+    choice,
+    originalIndex,
+  }))
+
+  for (let index = choices.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(random() * (index + 1))
+    ;[choices[index], choices[randomIndex]] = [
+      choices[randomIndex],
+      choices[index],
+    ]
+  }
+
+  const correctIndex = choices.findIndex(
+    ({ originalIndex }) => originalIndex === item.correctIndex
+  )
+  const shuffledChoices = choices.map(({ choice }) => choice)
+
+  return {
+    ...item,
+    choices: shuffledChoices,
+    correctIndex,
+    correctAnswer: shuffledChoices[correctIndex],
+    wrongAnswers: shuffledChoices.filter((_, index) => index !== correctIndex),
+  }
+}
+
 export async function selectQuestionPoolRow({
   learnerId,
   lessonId,
@@ -395,7 +442,7 @@ export async function issueQuestionPoolItem(
   row: QuestionPoolRow,
   session?: { sessionId: string; quizIndex: number; total: number }
 ) {
-  const item = toQuestionPoolItem(row)
+  const item = shuffleQuestionPoolItemChoices(toQuestionPoolItem(row))
   const memory = await issueQuiz(learnerId, {
     rawText: item.question,
     sources: savedMaterialSource(row.source_context),

@@ -1,10 +1,12 @@
 /** @jest-environment node */
 import { query } from '@/lib/server/db'
 import { issueQuiz } from '@/lib/server/quizGrading'
+import type { GeneratedQuizMemory } from '@/features/stores/home'
 import {
   issueQuestionPoolItem,
   selectLearningSetQuestionPoolRow,
   selectQuestionPoolRow,
+  shuffleQuestionPoolItemChoices,
   type QuestionPoolRow,
 } from '@/lib/server/questionPoolSelection'
 
@@ -32,6 +34,7 @@ const row: QuestionPoolRow = {
 
 describe('question pool selection', () => {
   beforeEach(() => jest.clearAllMocks())
+  afterEach(() => jest.restoreAllMocks())
 
   it('selects an active four-choice or written format at random within the lesson', async () => {
     ;(query as jest.Mock).mockResolvedValue({ rows: [row] })
@@ -92,19 +95,50 @@ describe('question pool selection', () => {
     ])
   })
 
+  it('shuffles saved choices while moving the correct index with its choice', () => {
+    const item = shuffleQuestionPoolItemChoices(
+      {
+        id: row.id,
+        lessonId: row.lesson_id,
+        questionType: 'multiple_choice',
+        question: row.question_text,
+        choices: row.choices || undefined,
+        correctIndex: row.correct_index ?? undefined,
+        correctAnswer: row.correct_answer || undefined,
+        wrongAnswers: row.wrong_answers || undefined,
+        difficultyLevel: row.difficulty_level,
+        questionGroup: row.question_group,
+      },
+      () => 0
+    )
+
+    expect(item.choices).toEqual(['SMTP', 'HTTP', 'FTP', 'POP3'])
+    expect(item.correctIndex).toBe(0)
+    expect(item.correctAnswer).toBe('SMTP')
+    expect(item.wrongAnswers).toEqual(['HTTP', 'FTP', 'POP3'])
+    expect(row.choices).toEqual(['POP3', 'SMTP', 'HTTP', 'FTP'])
+    expect(row.correct_index).toBe(1)
+  })
+
   it('issues from the saved server snapshot and returns public fields only', async () => {
-    ;(issueQuiz as jest.Mock).mockResolvedValue({
-      serverQuizId: 'issued-1',
-      question: row.question_text,
-      choices: row.choices,
-    })
+    jest.spyOn(Math, 'random').mockReturnValue(0)
+    ;(issueQuiz as jest.Mock).mockImplementation(
+      async (_learnerId: string, memory: GeneratedQuizMemory) => ({
+        serverQuizId: 'issued-1',
+        question: row.question_text,
+        choices: memory.choices,
+      })
+    )
+
     const result = await issueQuestionPoolItem('learner-1', row)
+
     expect(issueQuiz).toHaveBeenCalledWith(
       'learner-1',
       expect.objectContaining({
         questionPoolId: 'pool-1',
         lessonId: 'lesson-1',
-        answerIndex: 1,
+        choices: ['SMTP', 'HTTP', 'FTP', 'POP3'],
+        answerIndex: 0,
         answer: 'SMTP',
         explanation: row.explanation,
       })
@@ -112,7 +146,7 @@ describe('question pool selection', () => {
     expect(result).toMatchObject({
       serverQuizId: 'issued-1',
       question: row.question_text,
-      choices: row.choices,
+      choices: ['SMTP', 'HTTP', 'FTP', 'POP3'],
     })
     expect(result).not.toHaveProperty('answer')
     expect(result).not.toHaveProperty('answerIndex')
