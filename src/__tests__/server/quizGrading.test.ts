@@ -6,6 +6,7 @@ import {
   issueQuiz,
   parseServerQuiz,
   publicQuiz,
+  revealQuizAnswer,
   saveWrittenQuizGrade,
 } from '@/lib/server/quizGrading'
 import { ensureSchema, getPool, query } from '@/lib/server/db'
@@ -138,11 +139,13 @@ describe('server-owned quiz grading', () => {
 
   it('preserves the happy / sweat emotion mapping', () => {
     expect(buildServerGrade(quiz(), 1, 'B')).toMatchObject({
+      answerStatus: 'correct',
       correct: true,
       emotion: 'happy',
       correctIndex: 1,
     })
     expect(buildServerGrade(quiz(), 0, 'A')).toMatchObject({
+      answerStatus: 'incorrect',
       correct: false,
       emotion: 'sweat',
       correctIndex: 1,
@@ -198,6 +201,44 @@ describe('server-owned quiz grading', () => {
     expect(db.query.mock.calls.some(([sql]) => sql.startsWith('INSERT'))).toBe(
       false
     )
+  })
+
+  it('reveals the canonical answer as unanswered without adding an attempt', async () => {
+    const db = database({
+      quiz: { ...quiz(), serverQuizId: 'quiz-id' },
+      graded_result: null,
+    })
+    const result = await revealQuizAnswer('owner', 'quiz-id')
+
+    expect(result.grade).toMatchObject({
+      answerStatus: 'unanswered',
+      correct: false,
+      correctIndex: 1,
+      userIndex: null,
+      userAnswer: 'ー',
+      correctAnswer: 'B. SMTP',
+      explanation: '送信はSMTPです。',
+      emotion: 'neutral',
+    })
+    expect(db.query.mock.calls.some(([sql]) => sql.startsWith('INSERT'))).toBe(
+      false
+    )
+    expect(db.query).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE issued_quizzes SET graded_result'),
+      [expect.any(String), 'quiz-id', 'owner']
+    )
+    expect(db.query).toHaveBeenLastCalledWith('COMMIT')
+  })
+
+  it('does not reveal an already answered quiz as unanswered', async () => {
+    const db = database({
+      quiz: quiz(),
+      graded_result: { grade: { answerStatus: 'correct', userIndex: 1 } },
+    })
+    await expect(revealQuizAnswer('owner', 'quiz-id')).rejects.toMatchObject({
+      status: 409,
+    })
+    expect(db.query).toHaveBeenLastCalledWith('ROLLBACK')
   })
 
   it('does not allow changing the answer after the first submission', async () => {

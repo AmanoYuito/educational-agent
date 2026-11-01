@@ -236,6 +236,9 @@ export function buildServerGrade(
   const correct = userIndex === correctIndex
   return {
     type: 'grade' as const,
+    answerStatus: (correct ? 'correct' : 'incorrect') as
+      | 'correct'
+      | 'incorrect',
     serverQuizId: quiz.serverQuizId,
     correct,
     correctIndex,
@@ -245,6 +248,71 @@ export function buildServerGrade(
     message: '',
     explanation: quiz.explanation || '',
     correctAnswer: `${String.fromCharCode(65 + correctIndex)}. ${quiz.choices![correctIndex]}`,
+  }
+}
+
+export async function revealQuizAnswer(userId: string, quizId: string) {
+  await ensureSchema()
+  const db = await getPool().connect()
+  try {
+    await db.query('BEGIN')
+    const result = await db.query<{
+      quiz: GeneratedQuizMemory
+      graded_result: any | null
+    }>(
+      'SELECT quiz, graded_result FROM issued_quizzes WHERE id = $1 AND user_id = $2 FOR UPDATE',
+      [quizId, userId]
+    )
+    const row = result.rows[0]
+    if (!row)
+      throw new QuizError(
+        404,
+        '問題が見つかりません。新しく問題を生成してください。'
+      )
+    if (row.quiz.questionType === 'written' || !row.quiz.choices?.length)
+      throw new QuizError(400, 'この問題は4択問題ではありません。')
+
+    if (row.graded_result) {
+      if (row.graded_result.grade?.answerStatus !== 'unanswered')
+        throw new QuizError(409, 'この問題は回答済みです。')
+      await db.query('COMMIT')
+      return { ...row.graded_result, quiz: row.quiz }
+    }
+
+    const correctIndex = row.quiz.answerIndex
+    if (
+      !Number.isInteger(correctIndex) ||
+      correctIndex! < 0 ||
+      correctIndex! >= row.quiz.choices.length
+    ) {
+      throw new QuizError(500, '正答情報を確認できませんでした。')
+    }
+
+    const grade = {
+      type: 'grade' as const,
+      answerStatus: 'unanswered' as const,
+      serverQuizId: quizId,
+      correct: false,
+      correctIndex: correctIndex!,
+      userIndex: null,
+      userAnswer: 'ー',
+      emotion: 'neutral' as const,
+      message: '',
+      explanation: row.quiz.explanation || '',
+      correctAnswer: `${String.fromCharCode(65 + correctIndex!)}. ${row.quiz.choices[correctIndex!]}`,
+    }
+    const storedResult = { grade }
+    await db.query(
+      'UPDATE issued_quizzes SET graded_result = $1 WHERE id = $2 AND user_id = $3',
+      [JSON.stringify(storedResult), quizId, userId]
+    )
+    await db.query('COMMIT')
+    return { ...storedResult, quiz: row.quiz }
+  } catch (error) {
+    await db.query('ROLLBACK')
+    throw error
+  } finally {
+    db.release()
   }
 }
 
@@ -431,6 +499,9 @@ export async function saveWrittenQuizGrade(
           : 'review')
     const grade = {
       type: 'grade' as const,
+      answerStatus: (assessmentLevel === 'understood'
+        ? 'correct'
+        : 'incorrect') as 'correct' | 'incorrect',
       serverQuizId: quiz.serverQuizId,
       correct: assessmentLevel === 'understood',
       score: evaluation.score,

@@ -23,6 +23,7 @@ import { generateMessageId } from '@/utils/messageUtils'
 import { withBasePath } from '@/utils/basePath'
 import { isMultiModalAvailable } from '@/features/constants/aiModels'
 import {
+  revealQuizAnswer,
   submitQuizAnswer,
   submitWrittenQuizAnswer,
   type GradeQuizResponse,
@@ -33,6 +34,7 @@ const generateSessionId = () => generateMessageId()
 
 export type SendChatOptions = {
   dify?: DifyChatRequestOptions
+  quizAction?: 'reveal_answer'
 }
 
 const QUESTION_REQUEST_PATTERNS = [
@@ -1755,8 +1757,10 @@ export const handleSendChatFn =
         options?.dify?.mode === 'generate_question'
           ? null
           : homeStore.getState().latestGeneratedQuizMemory
+      const shouldRevealQuizAnswer = options?.quizAction === 'reveal_answer'
       let parsedMultipleChoiceAnswerIndex: number | null = null
       if (
+        !shouldRevealQuizAnswer &&
         activeQuizMemory?.awaitingAnswer &&
         Array.isArray(activeQuizMemory.choices) &&
         activeQuizMemory.choices.length > 0
@@ -1792,6 +1796,89 @@ export const handleSendChatFn =
 
       if (modalImage) {
         homeStore.setState({ modalImage: '' })
+      }
+
+      if (
+        shouldRevealQuizAnswer &&
+        activeQuizMemory?.awaitingAnswer &&
+        Array.isArray(activeQuizMemory.choices) &&
+        activeQuizMemory.choices.length > 0
+      ) {
+        try {
+          if (!activeQuizMemory.serverQuizId) {
+            throw new Error(
+              '更新前の問題では正答を取得できません。「問題生成」で新しく問題を生成してください。'
+            )
+          }
+          const revealed = await revealQuizAnswer(activeQuizMemory.serverQuizId)
+          const gradeResult = revealed.grade
+          const nextQuizMemory: GeneratedQuizMemory = {
+            ...activeQuizMemory,
+            awaitingAnswer: false,
+            explanationLevel: 1,
+            answerIndex: gradeResult.correctIndex ?? undefined,
+            answer: gradeResult.correctAnswer,
+            explanation: gradeResult.explanation,
+            lastUserAnswer: 'ー',
+            lastUserAnswerIndex: null,
+            lastIsCorrect: null,
+            updatedAt: new Date().toISOString(),
+          }
+
+          homeStore.setState({
+            latestGeneratedQuizMemory: nextQuizMemory,
+            ...(revealed.learningSet
+              ? { learningSetProgress: revealed.learningSet }
+              : {}),
+          })
+          homeStore.getState().upsertMessage({
+            id: generateMessageId(),
+            role: 'assistant',
+            content: JSON.stringify({
+              ...gradeResult,
+              questionType: 'multiple_choice',
+              serverQuizId: activeQuizMemory.serverQuizId,
+              quizIndex: activeQuizMemory.quizIndex,
+              total: activeQuizMemory.total,
+              learningSet: revealed.learningSet,
+            }),
+            meta: {
+              emotion: 'neutral',
+              userAnswer: 'ー',
+              serverQuizId: activeQuizMemory.serverQuizId,
+              grade: {
+                answerStatus: 'unanswered',
+                userIndex: null,
+                correctIndex: gradeResult.correctIndex ?? undefined,
+                emotion: 'neutral',
+                message: gradeResult.message,
+                explanation: gradeResult.explanation,
+              },
+            },
+          })
+          resetQuizEmotion()
+          await speakMessageHandler(
+            [
+              `正解は${gradeResult.correctAnswer}です。`,
+              gradeResult.explanation ? `解説：${gradeResult.explanation}` : '',
+            ]
+              .filter(Boolean)
+              .join('\n'),
+            { skipUpsert: true }
+          )
+        } catch (error) {
+          toastStore.getState().addToast({
+            message:
+              error instanceof Error
+                ? error.message
+                : '正答と解説を取得できませんでした。もう一度お試しください。',
+            type: 'error',
+            tag: 'quiz-answer-reveal-error',
+          })
+        } finally {
+          homeStore.setState({ chatProcessing: false })
+        }
+        return
       }
 
       if (
@@ -1868,6 +1955,7 @@ export const handleSendChatFn =
             userAnswer: newMessage,
             serverQuizId: graded.attempt.id,
             grade: {
+              answerStatus: gradeResult.correct ? 'correct' : 'incorrect',
               correct: gradeResult.correct,
               userIndex,
               correctIndex: gradeResult.correctIndex ?? undefined,
@@ -2003,6 +2091,7 @@ export const handleSendChatFn =
             userAnswer: newMessage,
             serverQuizId: graded.attempt.id,
             grade: {
+              answerStatus: gradeResult.correct ? 'correct' : 'incorrect',
               correct: gradeResult.correct,
               userIndex: undefined,
               correctIndex: undefined,

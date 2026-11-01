@@ -11,7 +11,10 @@ import webSocketStore from '../../../features/stores/websocketStore'
 import toastStore from '../../../features/stores/toast'
 import i18next from 'i18next'
 import { Message } from '../../../features/messages/messages'
-import { submitQuizAnswer } from '../../../../app/lib/api/client'
+import {
+  revealQuizAnswer,
+  submitQuizAnswer,
+} from '../../../../app/lib/api/client'
 import { getDifyChatResponse } from '@/features/chat/difyChat'
 
 jest.mock('@/features/chat/difyChat', () => ({
@@ -20,6 +23,7 @@ jest.mock('@/features/chat/difyChat', () => ({
 }))
 
 jest.mock('../../../../app/lib/api/client', () => ({
+  revealQuizAnswer: jest.fn(),
   submitQuizAnswer: jest.fn(),
 }))
 
@@ -275,6 +279,54 @@ describe('handlers', () => {
         explanation: 'SERVER_EXPLANATION',
       })
       expect(state.appendQuizHistory).toHaveBeenCalledWith(attempt, true)
+      expect(state.chatProcessing).toBe(false)
+    })
+
+    it('reveals the answer as unanswered without appending answer history', async () => {
+      ;(revealQuizAnswer as jest.Mock).mockResolvedValue({
+        grade: {
+          type: 'grade',
+          answerStatus: 'unanswered',
+          correct: false,
+          correctIndex: 1,
+          userIndex: null,
+          userAnswer: 'ー',
+          emotion: 'neutral',
+          message: '',
+          explanation: 'SERVER_EXPLANATION',
+          correctAnswer: 'B. b',
+        },
+      })
+
+      await handleSendChatFn()('答えと解説を教えてください。', {
+        quizAction: 'reveal_answer',
+      })
+
+      expect(revealQuizAnswer).toHaveBeenCalledWith('issued-id')
+      expect(submitQuizAnswer).not.toHaveBeenCalled()
+      expect(state.appendQuizHistory).not.toHaveBeenCalled()
+      expect(state.latestGeneratedQuizMemory).toMatchObject({
+        awaitingAnswer: false,
+        lastUserAnswer: 'ー',
+        lastUserAnswerIndex: null,
+        lastIsCorrect: null,
+        answerIndex: 1,
+        explanation: 'SERVER_EXPLANATION',
+      })
+      expect(state.upsertMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: 'user',
+          content: '答えと解説を教えてください。',
+        })
+      )
+      expect(state.upsertMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: 'assistant',
+          meta: expect.objectContaining({
+            grade: expect.objectContaining({ answerStatus: 'unanswered' }),
+          }),
+        })
+      )
       expect(state.chatProcessing).toBe(false)
     })
 

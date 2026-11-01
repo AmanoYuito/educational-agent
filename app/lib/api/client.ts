@@ -160,6 +160,7 @@ export async function saveQuestionPoolItems(
 export type GradeQuizResponse = {
   grade: {
     type: 'grade'
+    answerStatus?: 'correct' | 'incorrect' | 'unanswered'
     correct: boolean
     score?: number
     assessmentLevel?: WrittenAssessmentLevel
@@ -173,6 +174,13 @@ export type GradeQuizResponse = {
     userAnswer: string
   }
   attempt: QuizHistoryItem
+  learningSet?: LearningSetProgress | null
+}
+
+export type RevealQuizAnswerResponse = {
+  grade: GradeQuizResponse['grade'] & {
+    answerStatus: 'unanswered'
+  }
   learningSet?: LearningSetProgress | null
 }
 
@@ -211,6 +219,25 @@ export async function submitQuizAnswer(
   if (!response.ok)
     throw new Error(
       data.message || '採点に失敗しました。もう一度回答してください。'
+    )
+  return data
+}
+
+export async function revealQuizAnswer(
+  quizId: string
+): Promise<RevealQuizAnswerResponse> {
+  const response = await fetch(withBasePath('/api/reveal-quiz-answer/'), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ quizId }),
+    signal: AbortSignal.timeout(30000),
+  })
+  const data = await response.json()
+  if (!response.ok)
+    throw new Error(
+      data.message ||
+        '正答と解説を取得できませんでした。もう一度お試しください。'
     )
   return data
 }

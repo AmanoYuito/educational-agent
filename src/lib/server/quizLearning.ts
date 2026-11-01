@@ -11,6 +11,7 @@ export type LearningRecord = {
   quiz: GeneratedQuizMemory
   graded_result: {
     grade: {
+      answerStatus?: 'correct' | 'incorrect' | 'unanswered'
       correct: boolean
       userIndex: number | null
       userAnswer?: string
@@ -38,6 +39,8 @@ export function learningPrompt(
   const { quiz, graded_result } = record
   const isWritten = quiz.questionType === 'written'
   const index = graded_result!.grade.userIndex
+  const isUnanswered =
+    graded_result!.grade.answerStatus === 'unanswered' || index === null
   const writtenUserAnswer = String(
     graded_result!.attempt?.userAnswer || graded_result!.grade.userAnswer || ''
   ).trim()
@@ -70,10 +73,12 @@ export function learningPrompt(
               label: String.fromCharCode(65 + i),
               text,
             })),
-            selected: {
-              label: String.fromCharCode(65 + Number(index)),
-              text: quiz.choices?.[Number(index)],
-            },
+            selected: isUnanswered
+              ? null
+              : {
+                  label: String.fromCharCode(65 + Number(index)),
+                  text: quiz.choices?.[Number(index)],
+                },
             correct: {
               label: String.fromCharCode(65 + quiz.answerIndex!),
               text: quiz.choices?.[quiz.answerIndex!],
@@ -95,6 +100,11 @@ export async function explainLearningQuiz(
 ) {
   if (!record.graded_result)
     throw new QuizError(409, '回答してから追加の解説を確認してください。')
+  if (
+    kind === 'mistake' &&
+    record.graded_result.grade.answerStatus === 'unanswered'
+  )
+    throw new QuizError(400, '未回答の問題には選択肢の解説はありません。')
   if (kind === 'mistake' && record.graded_result.grade.correct)
     throw new QuizError(400, 'この問題は正解しています。')
   const cached = record.quiz.learningSupport?.[kind]

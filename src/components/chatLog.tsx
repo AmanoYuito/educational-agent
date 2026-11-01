@@ -324,6 +324,7 @@ const isLikelyQuizAnswerMessage = (
 ) => {
   const normalized = String(text || '').trim()
   if (!normalized) return false
+  if (normalized === '答えと解説を教えてください。') return true
 
   if (
     quizMemory?.awaitingAnswer &&
@@ -1130,7 +1131,6 @@ const DifyJsonCard = ({
   const handleSendChat = useMemo(() => handleSendChatFn(), [])
   const [reflection, setReflection] = useState('')
   const [reflectionSent, setReflectionSent] = useState(false)
-  const [revealedAnswerKeys, setRevealedAnswerKeys] = useState<string[]>([])
   const answeredQuizCount = useMemo(
     () =>
       chatLog.filter(
@@ -1233,37 +1233,6 @@ const DifyJsonCard = ({
           ? answeredQuizCount + 1
           : undefined
     const choiceList = Array.isArray(choices) ? choices.map(String) : []
-    const quizAnswerKey = String(
-      (data as any).serverQuizId ||
-        (latestGeneratedQuizMemory as any)?.serverQuizId ||
-        `${rawQuestion}-${currentQuizIndex ?? ''}`
-    )
-    const answerIndexValue =
-      (data as any).answerIndex ??
-      (latestGeneratedQuizMemory as any)?.answerIndex
-    const answerValue =
-      (data as any).answer ?? (latestGeneratedQuizMemory as any)?.answer
-    let answerIndex: number | null = null
-    if (typeof answerIndexValue === 'number') {
-      answerIndex = answerIndexValue
-    } else if (typeof answerValue === 'string') {
-      const normalizedAnswer = answerValue.trim()
-      const matchedIndex = choiceList.findIndex(
-        (choice) => choice === normalizedAnswer
-      )
-      if (matchedIndex >= 0) answerIndex = matchedIndex
-      else if (/^[A-D]$/i.test(normalizedAnswer)) {
-        answerIndex = normalizedAnswer.toUpperCase().charCodeAt(0) - 65
-      }
-    }
-    const answerText =
-      answerIndex !== null && choiceList[answerIndex]
-        ? `${String.fromCharCode(65 + answerIndex)}. ${choiceList[answerIndex]}`
-        : typeof answerValue === 'string' && answerValue.trim()
-          ? answerValue.trim()
-          : ''
-    const answerShown = revealedAnswerKeys.includes(quizAnswerKey)
-
     return (
       <div className="space-y-3">
         {introText ? (
@@ -1323,22 +1292,16 @@ const DifyJsonCard = ({
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    setRevealedAnswerKeys((previous) =>
-                      previous.includes(quizAnswerKey)
-                        ? previous.filter((key) => key !== quizAnswerKey)
-                        : [...previous, quizAnswerKey]
-                    )
-                  }
-                  className="rounded-lg border border-[#B9CBE8] bg-white px-3 py-2 text-xs font-bold text-[#2D62B5] hover:bg-[#F1F6FF]"
+                  disabled={!canAnswerQuiz}
+                  onClick={() => {
+                    void handleSendChat('答えと解説を教えてください。', {
+                      quizAction: 'reveal_answer',
+                    })
+                  }}
+                  className="rounded-lg border border-[#B9CBE8] bg-white px-3 py-2 text-xs font-bold text-[#2D62B5] hover:bg-[#F1F6FF] disabled:cursor-not-allowed disabled:bg-[#F3F5F8] disabled:text-[#9AA7BA]"
                 >
-                  {answerShown ? '答えを隠す' : '答えを見る'}
+                  答えを見る
                 </button>
-                {answerShown ? (
-                  <div className="rounded-lg bg-[#EEF4FF] px-3 py-2 text-sm font-semibold text-[#24324A]">
-                    正解：{answerText || '正解情報を表示できません。'}
-                  </div>
-                ) : null}
               </div>
             </div>
           ) : (
@@ -1362,6 +1325,11 @@ const DifyJsonCard = ({
 
   if (type === 'grade') {
     const correct = !!(data as any).correct
+    const answerStatus = ((data as any).answerStatus ||
+      (correct ? 'correct' : 'incorrect')) as
+      | 'correct'
+      | 'incorrect'
+      | 'unanswered'
     const assessmentLevel = (data as any).assessmentLevel as
       | 'understood'
       | 'partial'
@@ -1417,22 +1385,26 @@ const DifyJsonCard = ({
           </div>
           <div
             className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-bold ${
-              assessmentLevel === 'partial'
-                ? 'bg-[#FFF3D6] text-[#9A6500]'
-                : correct
-                  ? 'bg-[#EAF2FF] text-[#2C79EE]'
-                  : 'bg-[#F1F0F8] text-[#755D98]'
+              answerStatus === 'unanswered'
+                ? 'bg-[#EEF1F6] text-[#5F6D82]'
+                : assessmentLevel === 'partial'
+                  ? 'bg-[#FFF3D6] text-[#9A6500]'
+                  : correct
+                    ? 'bg-[#EAF2FF] text-[#2C79EE]'
+                    : 'bg-[#F1F0F8] text-[#755D98]'
             }`}
           >
-            {assessmentLevel === 'understood'
-              ? '理解できています'
-              : assessmentLevel === 'partial'
-                ? '一部理解できています'
-                : assessmentLevel === 'review'
-                  ? 'もう一度確認しよう'
-                  : correct
-                    ? '正解 ✅'
-                    : '不正解 ❌'}
+            {answerStatus === 'unanswered'
+              ? '未回答'
+              : assessmentLevel === 'understood'
+                ? '理解できています'
+                : assessmentLevel === 'partial'
+                  ? '一部理解できています'
+                  : assessmentLevel === 'review'
+                    ? 'もう一度確認しよう'
+                    : correct
+                      ? '正解 ✅'
+                      : '不正解 ❌'}
           </div>
           {typeof correctIndex === 'number' && correctIndex >= 0 ? (
             <div className="font-semibold text-[#24324A]">
@@ -1443,9 +1415,10 @@ const DifyJsonCard = ({
               模範解答：{insertSentenceLineBreaks(String(correctAnswer))}
             </div>
           ) : null}
-          {!correct && userAnswerLabel ? (
+          {answerStatus === 'unanswered' || (!correct && userAnswerLabel) ? (
             <div className="font-semibold text-[#24324A]">
-              あなたの回答：{userAnswerLabel}
+              {isWrittenGrade ? 'あなたの回答' : 'あなたの選択肢'}：
+              {answerStatus === 'unanswered' ? 'ー' : userAnswerLabel}
             </div>
           ) : null}
           {typeof quizIndex === 'number' ? (
@@ -1462,7 +1435,7 @@ const DifyJsonCard = ({
               {insertSentenceLineBreaks(String(explanation))}
             </div>
           ) : null}
-          {!correct ? (
+          {answerStatus === 'incorrect' ? (
             <div className="rounded-xl bg-[#F7F4FC] px-3 py-3 text-sm text-[#5F5275]">
               <div className="font-semibold leading-6">
                 解説を読んで、理解できたところを書いてみよう。
@@ -1519,7 +1492,7 @@ const DifyJsonCard = ({
             key={(data as any).serverQuizId || gradeKey}
             quizId={(data as any).serverQuizId}
             graded
-            incorrect={!correct}
+            incorrect={answerStatus === 'incorrect'}
             autoExplain={isLast && !skipInitialLive2D}
             userLabel={userAnswerLabel || undefined}
             questionType={isWrittenGrade ? 'written' : 'multiple_choice'}

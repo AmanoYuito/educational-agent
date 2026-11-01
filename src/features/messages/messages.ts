@@ -28,6 +28,7 @@ export type Message = {
       answerIndex?: number
     }
     grade?: {
+      answerStatus?: 'correct' | 'incorrect' | 'unanswered'
       correct?: boolean
       userIndex?: number | null
       correctIndex?: number
