@@ -15,6 +15,7 @@ import type {
   ActivityLogUser,
   ActivityLogUsersResponse,
 } from '@/features/admin/activityLogs'
+import { buildActivityLogsApiPath } from '@/features/admin/activityLogApi'
 import { understandSkillLabels } from '@/features/questionPool/types'
 import { withApiBasePath, withBasePath } from '@/utils/basePath'
 
@@ -138,13 +139,15 @@ export const AdminActivityLogs = ({ lessons }: { lessons: LessonOption[] }) => {
     Object.entries(appliedFilters).forEach(([key, value]) => {
       if (value) search.set(key, value)
     })
-    return withApiBasePath(`/api/admin/activity-logs?${search.toString()}`)
+    return withApiBasePath(buildActivityLogsApiPath(search))
   }, [appliedFilters])
 
   const loadUsers = useCallback(async () => {
     try {
       const response = await fetch(
-        withApiBasePath('/api/admin/activity-logs?view=users'),
+        withApiBasePath(
+          buildActivityLogsApiPath(new URLSearchParams({ view: 'users' }))
+        ),
         { credentials: 'include', cache: 'no-store' }
       )
       if (!response.ok) return
@@ -164,7 +167,7 @@ export const AdminActivityLogs = ({ lessons }: { lessons: LessonOption[] }) => {
         if (value) search.set(key, value)
       })
       const response = await fetch(
-        withApiBasePath(`/api/admin/activity-logs?${search.toString()}`),
+        withApiBasePath(buildActivityLogsApiPath(search)),
         { credentials: 'include', cache: 'no-store' }
       )
       const responseText = await response.text()

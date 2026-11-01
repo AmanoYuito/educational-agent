@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import type { QueryResultRow } from 'pg'
 
@@ -75,6 +76,11 @@ type ActivitySummaryRow = {
 }
 
 type UserRow = { id: string; username: string }
+
+type ActivityLogErrorResponse = {
+  message: string
+  requestId?: string
+}
 
 type SkillStatsRow = {
   understand_skill: string
@@ -362,7 +368,12 @@ const toCsv = (rows: ActivityEventRow[]) => {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ActivityLogResponse | { message: string } | string>
+  res: NextApiResponse<
+    | ActivityLogResponse
+    | ActivityLogUsersResponse
+    | ActivityLogErrorResponse
+    | string
+  >
 ) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET')
@@ -378,14 +389,31 @@ export default async function handler(
     return res.status(503).json({ message: 'DATABASE_URL is not set' })
   }
 
+  const view = readQueryValue(req.query.view)
+  if (view && view !== 'users') {
+    return res.status(400).json({ message: '表示種別を確認してください。' })
+  }
+
+  const requestId = randomUUID()
   try {
-    // ログ画面に必要な列とテーブルだけを先に整える。問題プールなど
-    // 他機能のスキーマ更新に失敗しても、学習ログの閲覧を止めない。
-    await ensureLearningLogSchema()
     const logQuery = <T extends QueryResultRow = QueryResultRow>(
       text: string,
       values: unknown[] = []
     ) => getPool().query<T>(text, values)
+
+    if (view === 'users') {
+      const usersResult = await logQuery<UserRow>(
+        `SELECT id::text AS id, username::text AS username
+         FROM profiles
+         ORDER BY username ASC
+         LIMIT 500`
+      )
+      return res.status(200).json({ users: usersResult.rows })
+    }
+
+    // ログ画面に必要な列とテーブルだけを先に整える。問題プールなど
+    // 他機能のスキーマ更新に失敗しても、学習ログの閲覧を止めない。
+    await ensureLearningLogSchema()
 
     const page = readPositiveInteger(req.query.page, 1, 100000)
     const pageSize = readPositiveInteger(req.query.pageSize, 25, 100)
@@ -664,10 +692,11 @@ export default async function handler(
       },
     })
   } catch (error) {
-    console.error('Failed to load activity logs:', error)
+    console.error(`Failed to load activity logs [${requestId}]:`, error)
     return res.status(500).json({
       message:
         '学習ログを取得できませんでした。DBの更新状態を確認してください。',
+      requestId,
     })
   }
 }

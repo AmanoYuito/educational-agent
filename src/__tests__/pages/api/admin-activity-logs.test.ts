@@ -204,6 +204,44 @@ describe('admin activity logs', () => {
     expect(mockQuery).toHaveBeenCalledTimes(1)
   })
 
+  it('returns the user filter options without running log schema updates', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        { id: 'student-1', username: 'student' },
+        { id: 'student-2', username: 'student-2' },
+      ],
+    })
+    const { req, res } = createMocks({
+      method: 'GET',
+      query: { view: 'users' },
+    })
+
+    await handler(req, res)
+
+    expect(res.statusCode).toBe(200)
+    expect(res._getJSONData()).toEqual({
+      users: [
+        { id: 'student-1', username: 'student' },
+        { id: 'student-2', username: 'student-2' },
+      ],
+    })
+    expect(ensureLearningLogSchema).not.toHaveBeenCalled()
+    expect(mockQuery).toHaveBeenCalledTimes(1)
+    expect(mockQuery.mock.calls[0][0]).toContain('FROM profiles')
+  })
+
+  it('rejects an unknown view without querying the database', async () => {
+    const { req, res } = createMocks({
+      method: 'GET',
+      query: { view: 'unknown' },
+    })
+
+    await handler(req, res)
+
+    expect(res.statusCode).toBe(400)
+    expect(mockQuery).not.toHaveBeenCalled()
+  })
+
   it('does not expose logs to a non-admin user', async () => {
     ;(requireSession as jest.Mock).mockReturnValue({
       userId: 'student-1',
