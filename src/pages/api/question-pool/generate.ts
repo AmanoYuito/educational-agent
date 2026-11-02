@@ -38,7 +38,7 @@ const requestSchema = z
       .default('multiple_choice'),
     bloomLevel: bloomSchema.optional(),
     understandSkill: understandSkillSchema.optional(),
-    difficultyLevel: z.number().int().min(1).max(6).default(3),
+    difficultyLevel: z.number().int().min(1).max(6).default(2),
     variantBase: z
       .object({
         familyId: z.string().trim().min(1).max(100),
@@ -287,6 +287,7 @@ export default async function handler(
       {
         source_context: sourceContext,
         question_type: input.questionType,
+        difficulty_level: String(input.difficultyLevel),
         ...bloomInputs,
       },
       queryText,

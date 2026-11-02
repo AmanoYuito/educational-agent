@@ -69,6 +69,7 @@ export async function requestDifyPoolGeneration(
   inputs: {
     source_context: string
     question_type: PoolQuestionType
+    difficulty_level: string
     bloom_level?: PoolBloomLevel
     understand_skill?: UnderstandSkill
   },

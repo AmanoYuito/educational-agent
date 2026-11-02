@@ -50,9 +50,29 @@ it('applies cognitive levels only to written nodes and allows the input to be om
   expect(
     start.data.variables.find((v) => v.variable === 'question_type').options
   ).toEqual(['multiple_choice', 'written'])
+  expect(
+    start.data.variables.find((v) => v.variable === 'difficulty_level')
+  ).toMatchObject({
+    options: ['1', '2', '3', '4', '5', '6'],
+    default: '2',
+  })
+  expect(
+    start.data.variables.find((v) => v.variable === 'understand_skill').options
+  ).toEqual([
+    'interpret',
+    'exemplify',
+    'classify',
+    'summarize',
+    'infer',
+    'compare',
+    'explain',
+  ])
   for (const node of nodes.filter((n) => n.data.type === 'llm')) {
     const text = node.data.prompt_template.map((p) => p.text).join('\n')
     expect(text).toContain(`{{#${start.id}.source_context#}}`)
+    expect(text).toContain(`{{#${start.id}.difficulty_level#}}`)
+    expect(text).toContain('【Role】')
+    expect(text).toContain('Step 1:')
     if (path('true').includes(node))
       expect(text).toContain(`{{#${start.id}.bloom_level#}}`)
     else
@@ -113,4 +133,12 @@ m.validate_pool_parameters(json.load(sys.stdin))`
   const unsupported = JSON.parse(JSON.stringify(parameters))
   unsupported.user_input_form[2].select.options.push('apply')
   expect(check(unsupported).status).not.toBe(0)
+  const stale = JSON.parse(JSON.stringify(parameters))
+  stale.user_input_form = stale.user_input_form.filter(
+    (form) =>
+      !Object.values(form).some(
+        (field) => field.variable === 'difficulty_level'
+      )
+  )
+  expect(check(stale).status).not.toBe(0)
 })

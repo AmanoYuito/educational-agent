@@ -47,11 +47,13 @@ def validate_pool_parameters(parameters):
         for value in form.values():
             if isinstance(value, dict) and value.get('variable'):
                 fields[value['variable']] = value
-    expected = {'source_context', 'question_type', 'bloom_level'}
+    expected = {'source_context', 'question_type', 'bloom_level', 'difficulty_level', 'understand_skill'}
     if not expected.issubset(fields) or any(v.get('required') for k, v in fields.items() if k not in expected):
-        raise SystemExit('4択・記述対応の教材ランダム出題YAMLを取り込んで公開してください。source_context・question_type・bloom_levelの入力設定が必要です。')
+        raise SystemExit('最新の教材ランダム出題YAMLを取り込んで公開してください。教材・問題形式・認知レベル・難易度・記述の問い方の入力設定が必要です。')
     if set(fields['question_type'].get('options', [])) != {'multiple_choice', 'written'} or set(fields['bloom_level'].get('options', [])) != {'remember', 'understand'}:
         raise SystemExit('問題形式と認知レベルの選択肢が一致しません。4択・記述対応の教材ランダム出題YAMLを公開してください。')
+    if set(fields['difficulty_level'].get('options', [])) != set('123456') or set(fields['understand_skill'].get('options', [])) != {'interpret', 'exemplify', 'classify', 'summarize', 'infer', 'compare', 'explain'}:
+        raise SystemExit('難易度または記述の問い方の選択肢が一致しません。最新の教材ランダム出題YAMLを公開してください。')
 
     if fields['bloom_level'].get('required') or fields['bloom_level'].get('default'):
         raise SystemExit('認知レベルは記述専用の任意入力（既定値なし）にしてください。最新の教材ランダム出題YAMLを公開してください。')

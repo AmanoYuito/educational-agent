@@ -33,7 +33,7 @@ export const AdminQuestionStudio = ({
   const [datasetId, setDatasetId] = useState(knowledgeSources[0]?.id || '')
   const knowledge = knowledgeSources.find((source) => source.id === datasetId)
   const [count, setCount] = useState(5)
-  const [difficultyLevel, setDifficultyLevel] = useState(3)
+  const [difficultyLevel, setDifficultyLevel] = useState(2)
   const [variantCount, setVariantCount] = useState(0)
   const [questionType, setQuestionType] =
     useState<PoolQuestionType>('multiple_choice')

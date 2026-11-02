@@ -91,6 +91,7 @@ describe('question pool generation with a separate Dify key', () => {
       source_context: '教材本文: メールを送信します。',
       question_type: 'multiple_choice',
       bloom_level: 'remember',
+      difficulty_level: '2',
     })
     expect(sent.query).toBe('問題を1問生成してください。')
     const output = res._getJSONData()
@@ -160,6 +161,7 @@ describe('question pool generation with a separate Dify key', () => {
       question_type: 'written',
       bloom_level: 'understand',
       understand_skill: 'explain',
+      difficulty_level: '2',
     })
     expect(res._getJSONData().item).toMatchObject({
       questionType: 'written',
@@ -186,7 +188,10 @@ describe('question pool generation with a separate Dify key', () => {
     await handler(req, res)
     expect(res.statusCode).toBe(200)
     const sent = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)
-    expect(sent.inputs).toMatchObject({ bloom_level: 'remember' })
+    expect(sent.inputs).toMatchObject({
+      bloom_level: 'remember',
+      difficulty_level: '2',
+    })
     expect(record().inputs).toMatchObject({ bloom_level: 'remember' })
     expect(res._getJSONData().item).toMatchObject({ bloomLevel: 'remember' })
   })
@@ -341,7 +346,7 @@ describe('question pool generation with a separate Dify key', () => {
     expect(record().error).toContain('認証')
     expect(res._getData()).not.toContain('private provider detail')
   })
-  it('ignores old topic/difficulty/history settings so comparisons stay independent', async () => {
+  it('passes difficulty while ignoring old topic and history settings', async () => {
     const { req, res } = request({
       topic: 'old topic',
       difficultyLevel: 6,
@@ -355,6 +360,7 @@ describe('question pool generation with a separate Dify key', () => {
       source_context: '教材本文: メールを送信します。',
       question_type: 'multiple_choice',
       bloom_level: 'remember',
+      difficulty_level: '6',
     })
     expect(record().status).toBe('success')
   })
