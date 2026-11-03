@@ -228,8 +228,7 @@ export default function App({ Component, pageProps }: AppProps) {
           <link
             key="favicon"
             rel="icon"
-            type="image/png"
-            sizes="256x256"
+            type="image/x-icon"
             href={withBasePath(FAVICON_HREF)}
           />
           <link
