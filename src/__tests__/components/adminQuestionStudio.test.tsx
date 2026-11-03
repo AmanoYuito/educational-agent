@@ -62,8 +62,8 @@ describe('batch model comparison', () => {
     )
 
     expect(await screen.findByText('4問')).toBeInTheDocument()
-    expect(screen.getByText('2問')).toBeInTheDocument()
-    expect(screen.getByText('1問')).toBeInTheDocument()
+    expect(screen.getByText('2問', { selector: 'p' })).toBeInTheDocument()
+    expect(screen.getByText('1問', { selector: 'p' })).toBeInTheDocument()
     expect(screen.getByText(/登録数：7問/)).toBeInTheDocument()
   })
 
@@ -93,13 +93,14 @@ describe('batch model comparison', () => {
     fireEvent.click(screen.getByRole('button', { name: 'まとめて問題を生成' }))
     expect(screen.getByRole('spinbutton')).toBeDisabled()
     await screen.findByText(
-      /3問分の生成が完了しました。成功 2問・生成できなかった問題 1問/
+      /生成が完了しました。成功 2問・生成できなかった問題 1問/
     )
     expect(generatePoolQuestion).toHaveBeenCalledTimes(3)
     for (const [request] of (generatePoolQuestion as jest.Mock).mock.calls)
       expect(request).toEqual({
         datasetId: knowledgeSources[0].id,
         questionType: 'multiple_choice',
+        difficultyLevel: 2,
         excludedSourceIds: [],
         rejectedSourceIds: [],
         evaluation: {
@@ -202,10 +203,10 @@ describe('batch model comparison', () => {
       target: { value: 'model-a' },
     })
     fireEvent.change(screen.getByRole('spinbutton'), {
-      target: { value: '31' },
+      target: { value: '101' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'まとめて問題を生成' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('1〜30')
+    expect(screen.getByRole('alert')).toHaveTextContent('1〜100')
     expect(generatePoolQuestion).not.toHaveBeenCalled()
   })
   it('retries material failures with a different source and carries batch exclusions forward', async () => {

@@ -21,6 +21,8 @@ import {
 } from '@/features/quizEvaluation/client'
 import { withBasePath } from '@/utils/basePath'
 
+const MAX_GENERATION_COUNT = 100
+
 export const AdminQuestionStudio = ({
   username,
   knowledgeSources,
@@ -70,12 +72,14 @@ export const AdminQuestionStudio = ({
       setErrors(['試行名と使用LLMを入力してください。'])
       return
     }
-    if (!Number.isInteger(count) || count < 1 || count > 30) {
-      setErrors(['生成数は1〜30の整数で入力してください。'])
+    if (!Number.isInteger(count) || count < 1 || count > MAX_GENERATION_COUNT) {
+      setErrors([`生成数は1〜${MAX_GENERATION_COUNT}の整数で入力してください。`])
       return
     }
-    if (count * (variantCount + 1) > 30) {
-      setErrors(['元問題と類題の合計が30問以内になるように設定してください。'])
+    if (count * (variantCount + 1) > MAX_GENERATION_COUNT) {
+      setErrors([
+        `元問題と類題の合計が${MAX_GENERATION_COUNT}問以内になるように設定してください。`,
+      ])
       return
     }
     setBusy(true)
@@ -392,7 +396,7 @@ export const AdminQuestionStudio = ({
               <input
                 type="number"
                 min={1}
-                max={30}
+                max={MAX_GENERATION_COUNT}
                 step={1}
                 className={field}
                 value={count}
