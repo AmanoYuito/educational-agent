@@ -73,7 +73,9 @@ export const AdminQuestionStudio = ({
       return
     }
     if (!Number.isInteger(count) || count < 1 || count > MAX_GENERATION_COUNT) {
-      setErrors([`生成数は1〜${MAX_GENERATION_COUNT}の整数で入力してください。`])
+      setErrors([
+        `生成数は1〜${MAX_GENERATION_COUNT}の整数で入力してください。`,
+      ])
       return
     }
     if (count * (variantCount + 1) > MAX_GENERATION_COUNT) {
