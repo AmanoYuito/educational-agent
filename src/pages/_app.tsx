@@ -1,11 +1,12 @@
 import '@charcoal-ui/icons'
 import type { AppProps } from 'next/app'
 import Head from 'next/head'
+import { useRouter } from 'next/router'
 import React, { useEffect, useRef } from 'react'
 import { Analytics } from '@vercel/analytics/react'
 
 import { isLanguageSupported } from '@/features/constants/settings'
-import { FAVICON_PATH } from '@/config/branding'
+import { FAVICON_PATH, LESSON_03_FAVICON_PATH } from '@/config/branding'
 import homeStore, { restoreServerHomeState } from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
 import '@/styles/globals.css'
@@ -15,6 +16,13 @@ import migrateStore from '@/utils/migrateStore'
 import i18n from '../lib/i18n'
 
 export default function App({ Component, pageProps }: AppProps) {
+  const router = useRouter()
+  const isMaterialPage = router.pathname === '/lesson-material/[lessonId]'
+  const faviconPath =
+    router.pathname === '/lessons/[lessonId]' &&
+    pageProps?.lesson?.id === 'computer-systems-2-03'
+      ? LESSON_03_FAVICON_PATH
+      : FAVICON_PATH
   const initializedRef = useRef(false)
   const authenticatedRef = useRef(false)
   const lastSavedLearningStateRef = useRef('')
@@ -220,24 +228,26 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <>
-      <Head>
-        <link
-          rel="icon"
-          type="image/png"
-          sizes="256x256"
-          href={withBasePath(FAVICON_PATH)}
-        />
-        <link
-          rel="shortcut icon"
-          type="image/png"
-          href={withBasePath(FAVICON_PATH)}
-        />
-        <link
-          rel="apple-touch-icon"
-          sizes="256x256"
-          href={withBasePath(FAVICON_PATH)}
-        />
-      </Head>
+      {!isMaterialPage && (
+        <Head>
+          <link
+            rel="icon"
+            type="image/png"
+            sizes="256x256"
+            href={withBasePath(faviconPath)}
+          />
+          <link
+            rel="shortcut icon"
+            type="image/png"
+            href={withBasePath(faviconPath)}
+          />
+          <link
+            rel="apple-touch-icon"
+            sizes="256x256"
+            href={withBasePath(faviconPath)}
+          />
+        </Head>
+      )}
       <Component {...pageProps} />
       <Analytics />
     </>

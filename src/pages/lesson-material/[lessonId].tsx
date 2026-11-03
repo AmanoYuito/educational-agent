@@ -2,7 +2,6 @@ import type { GetServerSideProps } from 'next'
 import Head from 'next/head'
 
 import { getLessonById, type LessonDefinition } from '@/config/lessons'
-import { FAVICON_PATH } from '@/config/branding'
 import { withBasePath } from '@/utils/basePath'
 
 type MaterialPageProps = { lesson: LessonDefinition }
@@ -24,12 +23,6 @@ export default function LessonMaterialPage({ lesson }: MaterialPageProps) {
     <>
       <Head>
         <title>{title}</title>
-        <link
-          rel="icon"
-          type="image/png"
-          sizes="256x256"
-          href={withBasePath(FAVICON_PATH)}
-        />
       </Head>
       <main aria-label={`${title}の授業資料`}>
         <iframe
