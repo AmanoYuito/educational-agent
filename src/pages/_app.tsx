@@ -1,9 +1,11 @@
 import '@charcoal-ui/icons'
 import type { AppProps } from 'next/app'
+import Head from 'next/head'
 import React, { useEffect, useRef } from 'react'
 import { Analytics } from '@vercel/analytics/react'
 
 import { isLanguageSupported } from '@/features/constants/settings'
+import { FAVICON_PATH } from '@/config/branding'
 import homeStore, { restoreServerHomeState } from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
 import '@/styles/globals.css'
@@ -218,6 +220,24 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <>
+      <Head>
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="256x256"
+          href={withBasePath(FAVICON_PATH)}
+        />
+        <link
+          rel="shortcut icon"
+          type="image/png"
+          href={withBasePath(FAVICON_PATH)}
+        />
+        <link
+          rel="apple-touch-icon"
+          sizes="256x256"
+          href={withBasePath(FAVICON_PATH)}
+        />
+      </Head>
       <Component {...pageProps} />
       <Analytics />
     </>
