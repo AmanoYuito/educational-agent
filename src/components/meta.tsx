@@ -1,5 +1,5 @@
 import { buildUrl } from '@/utils/buildUrl'
-import { FAVICON_PATH } from '@/config/branding'
+import { FAVICON_IMAGE_PATH } from '@/config/branding'
 import Head from 'next/head'
 export const Meta = () => {
   const title = 'コンピュータシステム2 学習支援AI'
@@ -8,7 +8,7 @@ export const Meta = () => {
   const siteOrigin =
     process.env.NEXT_PUBLIC_SITE_ORIGIN?.replace(/\/+$/, '') ||
     'https://160.251.180.133'
-  const imageUrl = `${siteOrigin}${buildUrl(FAVICON_PATH)}`
+  const imageUrl = `${siteOrigin}${buildUrl(FAVICON_IMAGE_PATH)}`
   return (
     <Head>
       <title>{title}</title>

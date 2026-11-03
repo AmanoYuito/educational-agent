@@ -6,7 +6,7 @@ import React, { useEffect, useRef } from 'react'
 import { Analytics } from '@vercel/analytics/react'
 
 import { isLanguageSupported } from '@/features/constants/settings'
-import { FAVICON_PATH, LESSON_03_FAVICON_PATH } from '@/config/branding'
+import { FAVICON_HREF, FAVICON_IMAGE_HREF } from '@/config/branding'
 import homeStore, { restoreServerHomeState } from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
 import '@/styles/globals.css'
@@ -18,11 +18,6 @@ import i18n from '../lib/i18n'
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter()
   const isMaterialPage = router.pathname === '/lesson-material/[lessonId]'
-  const faviconPath =
-    router.pathname === '/lessons/[lessonId]' &&
-    pageProps?.lesson?.id === 'computer-systems-2-03'
-      ? LESSON_03_FAVICON_PATH
-      : FAVICON_PATH
   const initializedRef = useRef(false)
   const authenticatedRef = useRef(false)
   const lastSavedLearningStateRef = useRef('')
@@ -231,20 +226,17 @@ export default function App({ Component, pageProps }: AppProps) {
       {!isMaterialPage && (
         <Head>
           <link
+            key="favicon"
             rel="icon"
             type="image/png"
             sizes="256x256"
-            href={withBasePath(faviconPath)}
+            href={withBasePath(FAVICON_HREF)}
           />
           <link
-            rel="shortcut icon"
-            type="image/png"
-            href={withBasePath(faviconPath)}
-          />
-          <link
+            key="apple-touch-icon"
             rel="apple-touch-icon"
             sizes="256x256"
-            href={withBasePath(faviconPath)}
+            href={withBasePath(FAVICON_IMAGE_HREF)}
           />
         </Head>
       )}
